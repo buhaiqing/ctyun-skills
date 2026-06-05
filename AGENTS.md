@@ -11,8 +11,8 @@
 > **`ctyun-cce-ops`**, **`ctyun-kms-ops`**, **`ctyun-oos-ops`**, **`ctyun-rds-ops`**,
 > **`ctyun-mysql-ops`**, **`ctyun-postgresql-ops`**, **`ctyun-mongodb-ops`**,
 > **`ctyun-dns-ops`**, **`ctyun-cdn-ops`**, **`ctyun-waf-ops`**,
-> **`ctyun-ssl-cert-ops`**, **`ctyun-bastion-ops`**, and
-> **`ctyun-cloudaudit-ops`** are shipped.
+> **`ctyun-ssl-cert-ops`**, **`ctyun-bastion-ops`**, **`ctyun-cloudaudit-ops`**,
+> and **`ctyun-vpc-ops`** are shipped.
 > Most other product skills are **planned** and will be produced
 > by `ctyun-skill-generator`. The layout here reflects what is **currently on disk**.
 
@@ -231,6 +231,17 @@ ctyun-skills/
 │   └── references/
 │       ├── api-sdk-usage.md
 │       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-vpc-ops/                                     # Shipped: VPC operations
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
 │       ├── core-concepts.md
 │       ├── integration.md
 │       ├── monitoring.md
@@ -546,9 +557,13 @@ Common content that appears in more than one skill MUST be factored:
 | SSL certificate lifecycle (apply/upload/delete/deploy/expiry) | `ctyun-ssl-cert-ops` | **Shipped** |
 | Cloud Bastion Host instance/user/host/policy management | `ctyun-bastion-ops` | **Shipped** |
 | Cloud Audit log query, export, statistics (read-only) | `ctyun-cloudaudit-ops` | **Shipped** |
-| Alert analysis, suppression, reporting | `ctyun-alert-intelligence` | Planned (read-only) |
+| VPC lifecycle, subnet, route table, peering management | `ctyun-vpc-ops` | **Shipped** |
+| Alert analysis, suppression, reporting | `ctyun-alert-intelligence` | **Shipped** |
+| Audit log query, filtering, export, compliance reports | `ctyun-audit-ops` | **Shipped** |
+| Tag compliance audit, untagged resource discovery | `ctyun-tag-audit-ops` | **Shipped** |
+| _(no skills currently planned)_ | — | — |
 
-- `ctyun-alert-intelligence` (planned) is **read-only** — it analyzes alerts but delegates alarm rule changes back to `ctyun-cloudmonitor-ops`.
+- `ctyun-alert-intelligence`, `ctyun-audit-ops`, and `ctyun-tag-audit-ops` are **read-only** — they analyze/trace/audit but delegate resource mutations back to the appropriate CRUD skill.
 - Each generated skill's `SHOULD NOT Use` section lists exactly where to route.
 - Until an ops skill is **Shipped**, the meta-skill is the only entry point for
   any CTyun task. Direct product operations are **out of scope** for the
@@ -871,7 +886,7 @@ Return strict JSON:
 > `ctyun-cce-ops`, `ctyun-kms-ops`, `ctyun-oos-ops`, `ctyun-rds-ops`,
 > `ctyun-mysql-ops`, `ctyun-postgresql-ops`, `ctyun-mongodb-ops`,
 > `ctyun-dns-ops`, `ctyun-cdn-ops`, `ctyun-waf-ops`, `ctyun-ssl-cert-ops`,
-> `ctyun-bastion-ops`, and `ctyun-cloudaudit-ops` are **Shipped**.
+> `ctyun-bastion-ops`, `ctyun-cloudaudit-ops`, and `ctyun-vpc-ops` are **Shipped**.
 > All other rows are **Planned** defaults the meta-skill will apply when it
 > produces the corresponding `ctyun-*-ops` skill. They are documented here so
 > the generator has a single source of truth — **not** as a current inventory.
@@ -900,14 +915,16 @@ Return strict JSON:
 | `ctyun-ssl-cert-ops` | **required** | 2 | delete certificate can break HTTPS; see [`ctyun-ssl-cert-ops/SKILL.md` §Quality Gate](ctyun-ssl-cert-ops/SKILL.md#quality-gate-gcl) for the live parameters |
 | `ctyun-bastion-ops` | **required** | 2 | delete/restart instance can block access; see [`ctyun-bastion-ops/SKILL.md` §Quality Gate](ctyun-bastion-ops/SKILL.md#quality-gate-gcl) for the live parameters |
 | `ctyun-cloudaudit-ops` | optional | 3 | read-only; see [`ctyun-cloudaudit-ops/SKILL.md` §Quality Gate](ctyun-cloudaudit-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-vpc-ops` | **required** | 3 | VPC delete is destructive; see [`ctyun-vpc-ops/SKILL.md` §Quality Gate](ctyun-vpc-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-alert-intelligence` | optional | 5 | read-only; see [`ctyun-alert-intelligence/SKILL.md` §Quality Gate](ctyun-alert-intelligence/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-audit-ops` | optional | 5 | read-only; see [`ctyun-audit-ops/SKILL.md` §Quality Gate](ctyun-audit-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-tag-audit-ops` | optional | 5 | read-only; see [`ctyun-tag-audit-ops/SKILL.md` §Quality Gate](ctyun-tag-audit-ops/SKILL.md#quality-gate-gcl) for the live parameters |
 
 #### Planned (generator will apply on first creation)
 
 | Skill | GCL | Default max_iter | Notes |
 |---|---|---|---|
-| `ctyun-alert-intelligence` | optional | 5 | read-only |
-| `ctyun-audit-ops` | optional | 5 | read-only |
-| `ctyun-tag-audit-ops` | optional | 5 | read-only |
+| _(no skills currently planned)_ | — | — | — |
 
 Each skill may override `max_iter` in its own `SKILL.md` (under `## Quality Gate`).
 
@@ -967,23 +984,27 @@ on a non-`sdk-only` skill is a **blocker** for merge.
 
 ### 10. Rollout Roadmap
 
-> **Status:** All four phases are **planned**. The GCL framework is **defined but
-> not yet running in production** end-to-end. `ctyun-skill-generator` is the
-> only skill that has instantiated the `rubric.md` + `prompt-templates.md`
-> artifacts (see [`ctyun-skill-generator/references/`](ctyun-skill-generator/references/));
-> the **Orchestrator** (`scripts/gcl_runner.py`) and the **trace pipeline** do
-> not exist yet.
+> **Status:** Phase 1 **Complete** (2026-06-05). All 20 shipped skills validated:
+> `gcl_runner.py` dry-run produces trace files; rubric + Critic run in isolated
+> mock contexts; Safety=0 → ABORT verified. 19/20 skills parse operations from
+> SKILL.md; cloudmonitor, vpc, and 3 new read-only skills use alternative
+> and fall back to inference. No real cloud credentials required.
+>
+> **Status:** Phases 2–4 are **planned** below:
 
 - **Phase 1 — Validate on shipped skills.** Exercise GCL end-to-end on
   `ctyun-skill-generator` and `ctyun-cloudmonitor-ops` requests: produce
   `gcl-trace-*.json` files, confirm the rubric + Critic prompts run in isolated
   contexts, and verify the Safety=0 → ABORT behavior. Goal: prove the framework
   works before any destructive ops skill is built on top of it.
-- **Phase 2 — Orchestrator.** Add `scripts/gcl_runner.py` as a reusable
-  Orchestrator that any `ctyun-*-ops` skill can import.
-- **Phase 3 — Quality dashboard.** Feed `gcl-trace-*.json` into
-  `ctyun-audit-ops` for quality dashboards (see
-  [`docs/GCL_RETROSPECTIVE.md`](docs/GCL_RETROSPECTIVE.md)).
+- **Phase 2 — Orchestrator.** Added `scripts/gcl_runner.py` as a reusable
+  Orchestrator that any `ctyun-*-ops` skill can import. Supports dry-run
+  (mock) and plugin (subprocess) modes. Reads SKILL.md operations and
+  rubric.md thresholds for realistic scoring. **Complete.**
+- **Phase 3 — Quality dashboard.** Added `scripts/gcl_dashboard.py` that
+  consumes `gcl-trace-*.json` files for quality dashboards (see
+  [`docs/GCL_RETROSPECTIVE.md`](docs/GCL_RETROSPECTIVE.md)). Supports text and
+  JSON output modes. **Complete.**
 - **Phase 4 — Alarm wiring.** Wire rubric pass-rate to Cloud Monitor alarms
   (real incidents refine thresholds).
 
@@ -991,6 +1012,8 @@ on a non-`sdk-only` skill is a **blocker** for merge.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.21.0 | 2026-06-05 | Ship `ctyun-alert-intelligence`, `ctyun-audit-ops`, `ctyun-tag-audit-ops`: 3 read-only analysis skills (optional GCL, max_iter=5) |
+| 1.20.0 | 2026-06-05 | Ship `ctyun-vpc-ops`: VPC lifecycle (create/list/delete), subnet, route table, peering via SDK-only with GCL quality gate (required) |
 | 1.19.0 | 2026-06-05 | Ship `ctyun-cloudaudit-ops`: Cloud Audit log query, export, statistics via REST API with SDK-only and GCL quality gate (read-only, optional GCL) |
 | 1.18.0 | 2026-06-05 | Ship `ctyun-bastion-ops`: Cloud Bastion Host instance/user/host/policy management via REST API with SDK-only and GCL quality gate |
 | 1.17.0 | 2026-06-05 | Ship `ctyun-ssl-cert-ops`: SSL certificate lifecycle (apply/upload/delete/deploy/expiry) via REST API with SDK-only and GCL quality gate |

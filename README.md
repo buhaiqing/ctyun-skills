@@ -36,10 +36,14 @@ A collection of **AI Agent Skill definitions** (structured Markdown documents fo
 | [`ctyun-ssl-cert-ops`](ctyun-ssl-cert-ops/) — SSL Certificate | **Shipped** (v1.0.0) |
 | [`ctyun-bastion-ops`](ctyun-bastion-ops/) — Cloud Bastion Host | **Shipped** (v1.0.0) |
 | [`ctyun-cloudaudit-ops`](ctyun-cloudaudit-ops/) — Cloud Audit | **Shipped** (v1.0.0) |
+| [`ctyun-vpc-ops`](ctyun-vpc-ops/) — VPC | **Shipped** (v1.0.0) |
+| [`ctyun-alert-intelligence`](ctyun-alert-intelligence/) — Alert Intelligence | **Shipped** (v1.0.0) |
+| [`ctyun-audit-ops`](ctyun-audit-ops/) — Audit Ops | **Shipped** (v1.0.0) |
+| [`ctyun-tag-audit-ops`](ctyun-tag-audit-ops/) — Tag Audit | **Shipped** (v1.0.0) |
 | Other `ctyun-*-ops` product skills | **Planned** |
-| GCL Phase 1 (validate on shipped skills) | **In Progress** |
-| GCL Phase 2 (Orchestrator: `scripts/gcl_runner.py`) | Planned |
-| GCL Phase 3 (Quality dashboard) | Planned |
+| GCL Phase 1 (validate on shipped skills) | **Complete** |
+| GCL Phase 2 (Orchestrator: `scripts/gcl_runner.py`) | **Shipped** |
+| GCL Phase 3 (Quality dashboard) | **Shipped** |
 | GCL Phase 4 (Alarm wiring) | Planned |
 
 ---
@@ -64,6 +68,10 @@ A collection of **AI Agent Skill definitions** (structured Markdown documents fo
 | [ctyun-ssl-cert-ops](ctyun-ssl-cert-ops/) | SSL Certificate | Certificate lifecycle (apply/upload/delete/deploy/expiry) | **required** | `ctyun-ssl-cert-ops/` |
 | [ctyun-bastion-ops](ctyun-bastion-ops/) | Cloud Bastion Host | Instance/user/host/policy management | **required** | `ctyun-bastion-ops/` |
 | [ctyun-cloudaudit-ops](ctyun-cloudaudit-ops/) | Cloud Audit | Log query, export, statistics (read-only) | optional | `ctyun-cloudaudit-ops/` |
+| [ctyun-vpc-ops](ctyun-vpc-ops/) | VPC | Virtual private cloud lifecycle (create/list/delete), subnet, route table, peering | **required** | `ctyun-vpc-ops/` |
+| [ctyun-alert-intelligence](ctyun-alert-intelligence/) | Alert Intelligence | Alert pattern analysis, noise suppression, incident summaries | optional | `ctyun-alert-intelligence/` |
+| [ctyun-audit-ops](ctyun-audit-ops/) | Audit Ops | Audit log query, filtering, export, compliance reports | optional | `ctyun-audit-ops/` |
+| [ctyun-tag-audit-ops](ctyun-tag-audit-ops/) | Tag Audit | Tag compliance audit, untagged resource discovery, tag reports | optional | `ctyun-tag-audit-ops/` |
 
 ---
 
@@ -73,7 +81,7 @@ Skills that `ctyun-skill-generator` will produce, ordered by priority:
 
 | Skill | Product | GCL | max_iter |
 |---|---|---|---|
-| `ctyun-alert-intelligence` | Alert Analysis (read-only) | optional | 5 |
+| _(No skills currently planned)_
 
 > Full 12-item list with `max_iter` defaults in [`AGENTS.md` §GCL §8](AGENTS.md#8-per-skill-defaults).
 
@@ -284,6 +292,26 @@ ctyun-skills/
 │       ├── prompt-templates.md
 │       ├── rubric.md
 │       └── troubleshooting.md
+├── ctyun-vpc-ops/                           # Shipped: VPC
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-alert-intelligence/              # Shipped: Alert Intelligence
+│   ├── SKILL.md
+│   └── references/
+├── ctyun-audit-ops/                      # Shipped: Audit Ops
+│   ├── SKILL.md
+│   └── references/
+├── ctyun-tag-audit-ops/                  # Shipped: Tag Audit
+│   ├── SKILL.md
+│   └── references/
 └── ctyun-kms-ops/                          # Shipped: KMS
     ├── SKILL.md
     ├── assets/

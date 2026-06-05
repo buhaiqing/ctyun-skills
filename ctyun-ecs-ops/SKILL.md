@@ -69,295 +69,125 @@ metadata:
 ## Execution Flows
 
 All operations follow the **ctyun-first with SDK fallback** policy defined in
-[`AGENTS.md`](../AGENTS.md#execution-strategy).
-
-### Pre-flight (shared)
-
-1. Verify `ctyun` CLI is installed (`ctyun --version`)
-2. Verify credentials configured (`test -n "$CTYUN_ACCESS_KEY"` and `test -n "$CTYUN_SECRET_KEY"`)
-3. Determine `{{user.region_id}}` — ask user if not already cached
-4. Set `CTYUN_FORCE_CLI=1` or `CTYUN_FORCE_SDK=1` if overrides present
-
-### Flow A: List ECS Instances
-
-**CLI path (primary):**
-
-```bash
-ctyun --output json ecs list \
-  --region-id {{user.region_id}} \
-  --page {{user.page_no|default(1)}} \
-  --page-size {{user.page_size|default(20)}}
-```
-
-**SDK fallback:**
-
-```python
-from ctyun_sdk.services.ecs import ECSClient
+[`AGENTS.md`](../AGENTS.md#execution-strategy) and the [CLI-First Decision Matrix](../AGENTS.md#cli-first-policy-repository-wide).
 
-client = ECSClient(
-    access_key="{{env.CTYUN_ACCESS_KEY}}",
-    secret_key="{{env.CTYUN_SECRET_KEY}}",
-    region_id="{{user.region_id}}"
-)
-instances = client.list_instances(
-    page_no={{user.page_no|default(1)}},
-    page_size={{user.page_size|default(20)}}
-)
-```
+### 1. Common Patterns
 
-**Validation:** Check `$.statusCode == 800`. Parse `$.returnObj.results[]`.
+| Pattern | Detail |
+|---|---|
+| **SDK client init** | `client = ECSClient(access_key="{{env.CTYUN_ACCESS_KEY}}", secret_key="{{env.CTYUN_SECRET_KEY}}", region_id="{{user.region_id}}")` — full code in `references/api-sdk-usage.md` |
+| **Response validation** | Check `$.statusCode == 800`. JSON envelope: `{"statusCode": 800, "message": "成功", "returnObj": {...}}` |
+| **Pre-flight (shared)** | (1) `ctyun --version`, (2) `test -n "$CTYUN_ACCESS_KEY" && test -n "$CTYUN_SECRET_KEY"`, (3) resolve `{{user.region_id}}`, (4) apply `CTYUN_FORCE_CLI` / `CTYUN_FORCE_SDK` overrides |
 
-### Flow B: Describe Instance Details
+### 2. Operation Summary
 
-**CLI path (primary):**
+| Flow | Operation | CLI command | Safety Gate | Output path |
+|---|---|---|---|---|
+| A | List instances | `ctyun --output json ecs list --region-id {{user.region_id}} --page N --page-size N` | — | `$.returnObj.results[]` |
+| B | Describe instance | `ctyun --output json ecs details {{user.instance_id}} --region-id {{user.region_id}}` | — | `$.returnObj` (instanceID, displayName, instanceStatus, privateIP, flavorName) |
+| C | **Create instance** | `ctyun --output json ecs create --name "..." --instance-type ... --image-id ... --region-id ... --vpc-id ... --subnet-id ... --security-group-ids ... --count 1` | ✅ cost confirm | `$.returnObj.instanceID` |
+| D | Start / Stop / Reboot | `ctyun --output json ecs start\|stop\|reboot {{user.instance_id}}` | ✅ stop/reboot confirm | `$.returnObj.jobID` |
+| E | **Delete instance** | `ctyun --output json ecs delete {{user.instance_id}} --confirm` | ✅ **irreversible** | `$.returnObj` |
+| F | Resize instance | `ctyun --output json ecs resize {{user.instance_id}} {{user.flavor_id}}` | — | `$.returnObj.jobID` |
+| G | Snapshot management | `ctyun --output json ecs list-snapshots\|get-snapshot-details ... --instance-id ...` | — | `$.returnObj.results[]` |
+| H | Key pair management | `ctyun --output json ecs list-keypairs --region-id ...` | — | `$.returnObj.results[]` |
+| I | Create image from instance | `ctyun --output json ecs create-image {{user.instance_id}} --name "..."` | — | `$.returnObj` |
+| J | List available flavors | `ctyun --output json ecs flavor-options --region-id {{user.region_id}}` | — | `$.returnObj` |
+| K | Async job query | `ctyun --output json ecs query-async-result --region-id ... --job-id ...` | — | `$.returnObj.jobList[]` |
+| L | Connect via CloudShell | `ctyun --output json ecs cloudshell {{user.instance_id}} --region-id ...` | — | `$.returnObj.consoleUrl` (expires 5min) |
 
-```bash
-ctyun --output json ecs details {{user.instance_id}} \
-  --region-id {{user.region_id}}
-```
+> **Execution preference:** Prefer `ctyun` CLI per [CLI-First Policy](../../AGENTS.md#cli-first-policy-repository-wide). SDK init one-liner above; full SDK code in `references/api-sdk-usage.md`.
 
-**SDK fallback:**
+### 3. Per-Flow Details
 
-```python
-client = ECSClient(...)
-instance = client.get_instance(
-    instance_id="{{user.instance_id}}",
-    region_id="{{user.region_id}}"
-)
-```
+#### A: List ECS Instances (read-only)
 
-**Validation:** Check `$.statusCode == 800`. Parse `$.returnObj` for `instanceID`, `displayName`, `instanceStatus`, `privateIP`, `flavorName`.
+| CLI | `ctyun --output json ecs list --region-id {{user.region_id}} --page {{user.page_no\|default(1)}} --page-size {{user.page_size\|default(20)}}` |
+|---|---|
+| SDK | `client.list_instances(page_no={{user.page_no\|default(1)}}, page_size={{user.page_size\|default(20)}})` |
 
-### Flow C: Create Instance
+#### B: Describe Instance Details (read-only)
 
-**CLI path (primary):**
+| CLI | `ctyun --output json ecs details {{user.instance_id}} --region-id {{user.region_id}}` |
+|---|---|
+| SDK | `client.get_instance(instance_id="{{user.instance_id}}", region_id="{{user.region_id}}")` |
+| Fields | `$.returnObj.instanceID, displayName, instanceStatus, privateIP[], flavorName, imageName, expireTime` |
 
-```bash
-ctyun --output json ecs create \
-  --name {{user.instance_name}} \
-  --instance-type {{user.flavor_id}} \
-  --image-id {{user.image_id}} \
-  --region-id {{user.region_id}} \
-  --system-disk-type {{user.system_disk_type|default("SSD")}} \
-  --system-disk-size {{user.system_disk_size|default(40)}} \
-  --vpc-id {{user.vpc_id}} \
-  --subnet-id {{user.subnet_id}} \
-  --security-group-ids {{user.security_group_ids}} \
-  --count {{user.count|default(1)}}
-```
+#### C: Create Instance (cost-incurring, requires safety gate)
 
-**SDK fallback:**
+| Aspect | Detail |
+|---|---|
+| ✅ Safety Gate | Confirm: "Create N instance(s) named '{{user.instance_name}}' (flavor: {{user.flavor_id}}, image: {{user.image_id}})? This will incur charges. (y/N)" |
+| CLI | `ctyun --output json ecs create --name {{user.instance_name}} --instance-type {{user.flavor_id}} --image-id {{user.image_id}} --region-id {{user.region_id}} --system-disk-type SSD --system-disk-size 40 --vpc-id {{user.vpc_id}} --subnet-id {{user.subnet_id}} --security-group-ids {{user.security_group_ids}} --count {{user.count\|default(1)}}` |
+| SDK | `client.create_instance(name="{{user.instance_name}}", instance_type="{{user.flavor_id}}", image_id="{{user.image_id}}", system_disk_type="SSD", system_disk_size=40, vpc_id="{{user.vpc_id}}", subnet_id="{{user.subnet_id}}", security_group_ids=["..."], count={{user.count\|default(1)}})` |
+| Output | `$.returnObj.instanceID, jobID` |
 
-```python
-client = ECSClient(...)
-result = client.create_instance(
-    name="{{user.instance_name}}",
-    instance_type="{{user.flavor_id}}",
-    image_id="{{user.image_id}}",
-    system_disk_type="{{user.system_disk_type|default('SSD')}}",
-    system_disk_size={{user.system_disk_size|default(40)}},
-    vpc_id="{{user.vpc_id}}",
-    subnet_id="{{user.subnet_id}}",
-    security_group_ids=["{{user.security_group_ids}}"],
-    count={{user.count|default(1)}}
-)
-```
+#### D: Start / Stop / Reboot Instance
 
-**Safety Gate:** Instance creation incurs cost. Confirm with user before proceeding:
-> "Create {{user.count|default(1)}} ECS instance(s) named '{{user.instance_name}}'
-> (flavor: {{user.flavor_id}}, image: {{user.image_id}})? This will incur charges. (y/N)"
+| Action | CLI | SDK | State transition |
+|---|---|---|---|
+| Start | `ctyun --output json ecs start {{user.instance_id}}` | `client.start_instance(instance_id="{{user.instance_id}}")` | stopped → running |
+| Stop | `ctyun --output json ecs stop {{user.instance_id}}` | `client.stop_instance(instance_id="{{user.instance_id}}", force=False)` | running → stopped |
+| Stop (force) | `ctyun --output json ecs stop {{user.instance_id}} --force` | `client.stop_instance(... force=True)` | any → stopped |
+| Reboot | `ctyun --output json ecs reboot {{user.instance_id}}` | `client.reboot_instance(...)` | running → running |
 
-### Flow D: Start / Stop / Reboot Instance
+#### E: Delete Instance (IRREVERSIBLE)
 
-**Start:**
+| Aspect | Detail |
+|---|---|
+| ✅ Safety Gate | MUST confirm: "Delete ECS instance {{user.instance_id}}? IRREVERSIBLE. Associated data disks will also be deleted. Type 'yes' to confirm." |
+| CLI | `ctyun --output json ecs delete {{user.instance_id}} --confirm` |
+| SDK | `client.delete_instance(instance_id="{{user.instance_id}}", delete_disk=True)` |
 
-```bash
-ctyun --output json ecs start {{user.instance_id}}
-```
+#### F: Resize Instance
 
-**Stop:**
+| CLI | `ctyun --output json ecs resize {{user.instance_id}} {{user.flavor_id}}` |
+|---|---|
+| SDK | `client.resize_instance(instance_id="{{user.instance_id}}", instance_type="{{user.flavor_id}}")` |
+| Pre-condition | Instance must be in `stopped` state |
 
-```bash
-ctyun --output json ecs stop {{user.instance_id}}
-```
+#### G: Snapshot Management (read-only operations)
 
-**Stop (force):**
+| Operation | CLI |
+|---|---|
+| List snapshots | `ctyun --output json ecs list-snapshots --region-id {{user.region_id}} --instance-id {{user.instance_id}} --page N --page-size N` |
+| Get snapshot details | `ctyun --output json ecs get-snapshot-details --region-id {{user.region_id}} --snapshot-id {{user.snapshot_id}}` |
 
-```bash
-ctyun --output json ecs stop {{user.instance_id}} --force
-```
+#### H: Key Pair Management (read-only)
 
-**Reboot:**
+| CLI | `ctyun --output json ecs list-keypairs --region-id {{user.region_id}} --page N` |
+|---|---|
+| Output | `$.returnObj.results[]` → keyPairID, keyPairName, fingerPrint, bindInstanceNum |
 
-```bash
-ctyun --output json ecs reboot {{user.instance_id}}
-```
+#### I: Create Image from Instance
 
-**SDK fallback (all three):**
+| CLI | `ctyun --output json ecs create-image {{user.instance_id}} --name {{user.image_name}} --description "..."` |
+|---|---|
+| SDK | `client.create_image(instance_id="{{user.instance_id}}", name="{{user.image_name}}")` |
 
-```python
-client = ECSClient(...)
-client.start_instance(instance_id="{{user.instance_id}}")
-client.stop_instance(instance_id="{{user.instance_id}}", force=False)
-client.reboot_instance(instance_id="{{user.instance_id}}", force=False)
-```
+#### J: List Available Flavors (read-only)
 
-**Validation:** Check `$.statusCode == 800`.
+| CLI | `ctyun --output json ecs flavor-options --region-id {{user.region_id}}` |
+|---|---|
+| SDK | `client.query_flavor_options()` |
+| Output | `$.returnObj` → flavorNameScope[], flavorCPUScope[], flavorRAMScope[], flavorFamilyScope[] |
 
-### Flow E: Delete Instance
+#### K: Async Job Query
 
-**CLI path (primary):**
+| Operation | CLI |
+|---|---|
+| Single job | `ctyun --output json ecs query-async-result --region-id {{user.region_id}} --job-id {{user.job_id}}` |
+| Multiple jobs | `ctyun --output json ecs query-jobs --region-id {{user.region_id}} --job-ids "[...]"` |
+| Status | `$.returnObj.jobList[*].jobStatus` — 0=executing, 1=success, 2=fail |
 
-```bash
-ctyun --output json ecs delete {{user.instance_id}} --confirm
-```
+#### L: Connect via CloudShell
 
-**SDK fallback:**
+CloudShell provides web-based terminal access to ECS instances (no SSH/public IP needed). Useful for troubleshooting, private subnet access, lost keys.
 
-```python
-client = ECSClient(...)
-client.delete_instance(
-    instance_id="{{user.instance_id}}",
-    delete_disk=True
-)
-```
-
-**Safety Gate (CRITICAL):** Before deletion, MUST confirm with user:
-> "Delete ECS instance {{user.instance_id}}? This is IRREVERSIBLE.
-> Associated data disks will also be deleted. Type 'yes' to confirm:"
-
-### Flow F: Resize Instance
-
-**CLI path (primary):**
-
-```bash
-ctyun --output json ecs resize {{user.instance_id}} {{user.flavor_id}}
-```
-
-**SDK fallback:**
-
-```python
-client = ECSClient(...)
-client.resize_instance(
-    instance_id="{{user.instance_id}}",
-    instance_type="{{user.flavor_id}}"
-)
-```
-
-**Note:** Instance must be in `stopped` state before resize.
-
-### Flow G: Snapshot Management
-
-**List snapshots:**
-
-```bash
-ctyun --output json ecs list-snapshots \
-  --region-id {{user.region_id}} \
-  --instance-id {{user.instance_id}} \
-  --page {{user.page_no|default(1)}} \
-  --page-size {{user.page_size|default(10)}}
-```
-
-**Get snapshot details:**
-
-```bash
-ctyun --output json ecs get-snapshot-details \
-  --region-id {{user.region_id}} \
-  --snapshot-id {{user.snapshot_id}}
-```
-
-### Flow H: Key Pair Management
-
-**List key pairs:**
-
-```bash
-ctyun --output json ecs list-keypairs \
-  --region-id {{user.region_id}} \
-  --page {{user.page_no|default(1)}}
-```
-
-### Flow I: Create Image from Instance
-
-**CLI path (primary):**
-
-```bash
-ctyun --output json ecs create-image {{user.instance_id}} \
-  --name {{user.image_name}} \
-  --description "{{user.image_description|default('')}}"
-```
-
-### Flow J: List Available Flavors
-
-**CLI path (primary):**
-
-```bash
-ctyun --output json ecs flavor-options --region-id {{user.region_id}}
-```
-
-**SDK fallback:**
-
-```python
-client = ECSClient(...)
-client.query_flavor_options()
-```
-
-### Flow K: Async Job Query
-
-**Query single job:**
-
-```bash
-ctyun --output json ecs query-async-result \
-  --region-id {{user.region_id}} \
-  --job-id {{user.job_id}}
-```
-
-**Query multiple jobs:**
-
-```bash
-ctyun --output json ecs query-jobs \
-  --region-id {{user.region_id}} \
-  --job-ids "{{user.job_ids}}"
-```
-
-### Flow L: Connect via CloudShell
-
-CloudShell provides a web-based terminal connection to ECS instances without
-requiring SSH keys or public IP addresses. Useful for:
-- Quick troubleshooting when SSH is unavailable
-- Accessing instances in private subnets
-- Emergency access when key pairs are lost
-
-**CLI path (primary):**
-
-```bash
-ctyun --output json ecs cloudshell {{user.instance_id}} \
-  --region-id {{user.region_id}}
-```
-
-**SDK fallback:**
-
-```python
-client = ECSClient(...)
-result = client.get_instance_cloudshell(
-    instance_id="{{user.instance_id}}",
-    region_id="{{user.region_id}}"
-)
-```
-
-**Validation:** Check `$.statusCode == 800`. Parse `$.returnObj.consoleUrl` for
-the CloudShell access URL. URL typically expires in 5 minutes.
-
-**Output:**
-```json
-{
-  "statusCode": 800,
-  "message": "成功",
-  "returnObj": {
-    "consoleUrl": "https://cloudshell.ctyun.cn/vnc/...",
-    "expireTime": "2026-06-05T12:00:00Z"
-  }
-}
-```
+| CLI | `ctyun --output json ecs cloudshell {{user.instance_id}} --region-id {{user.region_id}}` |
+|---|---|
+| SDK | `client.get_instance_cloudshell(instance_id="{{user.instance_id}}", region_id="{{user.region_id}}")` |
+| Output | `$.returnObj.consoleUrl` (expires in 5 minutes) |
 
 ---
 

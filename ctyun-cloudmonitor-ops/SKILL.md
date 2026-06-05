@@ -165,617 +165,160 @@ Structured placeholders reduce injection ambiguity and unsafe prompts:
 
 ## Execution Flows (Agent-Readable)
 
-Every operation: **Pre-flight → Execute (SDK/API and `ctyun`) → Validate → Recover**. Do not skip phases.
+### 1. Common Patterns
 
-**Execution Preference:** When both paths exist, prefer `ctyun` CLI for quick ad-hoc operations; prefer SDK for programmatic automation or complex workflows.
+All operations below share these patterns. Individual operations only document what differs.
 
----
-
-### Operation: CreateAlarmRule
-
-#### Pre-flight Checks
-
-| Check | Method | Expected | On Failure |
-|-------|--------|----------|------------|
-| SDK / deps | Import client; version matches `metadata.api_profile` | No import error | Document install pin |
-| CLI / deps | `ctyun --version` | Exit code 0 | Document CLI install / `ctyun config init` |
-| Credentials | Construct credential from env (SDK) or CLI config | Non-empty keys / valid config | HALT; user configures env |
-| Region | Validate `{{user.region}}` is supported | Region exists in CTyun | Suggest valid region |
-| Resource | Verify `{{user.resource_id}}` exists in target namespace | Resource found | HALT; verify resource ID |
-| Quota | Check alarm rule quota | Sufficient quota | HALT; user raises quota |
-
-#### Execution (Python SDK)
+#### SDK Client Initialization
 
 ```python
-import os
-from ctyun_sdk.core.credential import Credential
+# Full code in references/api-sdk-usage.md §Initialization
 from ctyun_sdk.services.cloudmonitor.client import CloudMonitorClient
-from ctyun_sdk.services.cloudmonitor.apis.create_alarm_rule import CreateAlarmRuleRequest
-
-credential = Credential(os.environ["CTYUN_ACCESS_KEY"], os.environ["CTYUN_SECRET_KEY"])
 client = CloudMonitorClient(credential, os.environ.get("CTYUN_REGION", "cn-gz"))
-
-req = CreateAlarmRuleRequest(
-    regionId="{{user.region}}",
-    alarmName="{{user.alarm_name}}",
-    namespace="{{user.namespace}}",
-    metricName="{{user.metric_name}}",
-    resourceId="{{user.resource_id}}",
-    period=300,  # 5 minutes
-    statistic="Average",
-    comparisonOperator="GreaterThanThreshold",
-    threshold=80.0,
-    evaluationCount=3,
-    alarmActions=["arn:ctyun:sms:{{user.region}}:{{env.CTYUN_ACCESS_KEY}}:alert"],
-    okActions=[],
-    insufficientDataActions=[]
-)
-resp = client.create_alarm_rule(req)
 ```
 
-#### Execution — CLI (`ctyun`)
+For `requests`-based SDK calls (alarm blacklist ops), see `references/api-sdk-usage.md` §Blacklist SDK.
 
-```bash
-ctyun --output json cloudmonitor create-alarm-rule \
-  --region-id "{{user.region}}" \
-  --alarm-name "{{user.alarm_name}}" \
-  --namespace "{{user.namespace}}" \
-  --metric-name "{{user.metric_name}}" \
-  --resource-id "{{user.resource_id}}" \
-  --period 300 \
-  --statistic Average \
-  --comparison-operator GreaterThanThreshold \
-  --threshold 80.0 \
-  --evaluation-count 3 \
-  --alarm-actions '["arn:ctyun:sms:{{user.region}}:{{env.CTYUN_ACCESS_KEY}}:alert"]'
-```
+#### Response Validation (applies to every SDK/CLI response)
 
-#### Post-execution Validation
+| Check | How | Action |
+|---|---|---|
+| HTTP/status 200, `result` non-null | inspect JSON body | OK |
+| `errorCode` starts with "5" | retry once; if persists, log | fall back to SDK (if currently CLI) |
+| `errorCode` starts with "4" | business error | surface to user; **never** fall back |
 
-1. Read `{{output.alarm_id}}` from `$.result.alarmId` in the response.
-2. Call **DescribeAlarmRules** to verify the alarm exists and is in `enabled` state.
-3. On success, report `{{output.alarm_id}}` to the user.
-4. On failure, go to **Failure Recovery**.
+#### Failure Recovery (applies to every operation unless overridden below)
 
-#### Failure Recovery
-
-| Error pattern | Max retries | Backoff | Agent Action |
-|--------------|-------------|---------|--------------|
-| `InvalidParameter` / 400 invalid input | 0–1 | — | Fix args from OpenAPI; retry once if safe |
-| `ResourceNotFound` | 0 | — | HALT; verify resource ID |
-| `QuotaExceeded` | 0 | — | HALT |
-| `AlarmNameAlreadyExists` | 0 | — | Ask reuse vs new name |
-| Throttling / 429 | 3 | exponential | Back off; respect `Retry-After` |
+| Pattern | Retries | Backoff | Agent Action |
+|---|---|---|---|
+| `InvalidParameter` / 400 | 0-1 | — | Fix args from OpenAPI; retry once if safe |
+| `ResourceNotFound` / 404 | 0 | — | HALT; verify the resource/ID |
+| `QuotaExceeded` / name exists | 0 | — | HALT or ask reuse |
+| Throttling / 429 | 3 | 2s, 4s, 8s | Back off; retry |
 | `InternalError` / 5xx | 3 | 2s, 4s, 8s | Retry; then HALT |
 
----
+### 2. Operation Summary
 
-### Operation: DescribeAlarmRules
+| # | Operation | SDK method / CLI command | Safety Gate | Timeout | JSON output path |
+|---|---|---|---|---|---|
+| 1 | **CreateAlarmRule** | `client.create_alarm_rule` / `ctyun cloudmonitor create-alarm-rule` | — | 30s | `$.result.alarmId` |
+| 2 | **DescribeAlarmRules** | `client.describe_alarm_rules` / `ctyun cloudmonitor describe-alarm-rules` | — | 30s | `$.result.alarms[*]` |
+| 3 | **ModifyAlarmRule** | `client.modify_alarm_rule` / `ctyun cloudmonitor modify-alarm-rule` | confirm | 30s | `$.result.success` |
+| 4 | **DeleteAlarmRule** | `client.delete_alarm_rule` / `ctyun cloudmonitor delete-alarm-rule` | **confirm** | 30s | `$.result.success` |
+| 5 | **QueryMetricData** | `client.query_metric_data` / `ctyun cloudmonitor query-metric-data` | — | 60s | `$.result.datapoints[*]` |
+| 6 | **ListMetrics** | `client.list_metrics` / `ctyun cloudmonitor list-metrics` | — | 30s | `$.result.metrics[*]` |
+| 7 | **ListAlarmHistory** | `client.list_alarm_history` / `ctyun cloudmonitor list-alarm-history` | — | 30s | `$.result.history[*]` |
+| 8 | **CreateAlarmBlacklist** | `requests.post` / `ctyun monitor create-alarm-blacklist` | — | 30s | `$.data.id` |
+| 9 | **QueryAlarmBlacklists** | `requests.get` / `ctyun monitor query-alarm-blacklist` | — | 30s | `$.data.result[*]` |
+| 10 | **ChangeAlarmBlacklistsStatus** | `requests.post` / `ctyun monitor change-alarm-blacklists-status` | **confirm** | 30s | `$.code` |
+| 11 | **DeleteAlarmBlacklists** | `requests.post` / `ctyun monitor delete-alarm-blacklists` | **confirm** | 60s | `$.code` |
 
-#### Execution (Python SDK)
+> **Execution preference:** Prefer `ctyun` CLI for quick ad-hoc ops; prefer SDK for automation. See [CLI-First Decision Matrix](../../AGENTS.md#cli-first-policy-repository-wide).
 
-```python
-from ctyun_sdk.services.cloudmonitor.apis.describe_alarm_rules import DescribeAlarmRulesRequest
+### 3. Per-Operation Details
 
-req = DescribeAlarmRulesRequest(
-    regionId="{{user.region}}",
-    alarmId="{{user.alarm_id}}",  # optional: filter by ID
-    alarmName="{{user.alarm_name}}",  # optional: filter by name
-    namespace="{{user.namespace}}",  # optional: filter by namespace
-    pageNumber=1,
-    pageSize=50
-)
-resp = client.describe_alarm_rules(req)
-```
+#### Op 1: CreateAlarmRule
 
-#### Execution — CLI (`ctyun`)
+| Aspect | Detail |
+|---|---|
+| Pre-flight | region valid? resource exists? quota sufficient? |
+| SDK | `client.create_alarm_rule(regionId="{{user.region}}", alarmName="{{user.alarm_name}}", metricName="{{user.metric_name}}", resourceId="{{user.resource_id}}", period=300, threshold=80.0, evaluationCount=3, ...)` — full params in `references/api-sdk-usage.md` |
+| CLI | `ctyun --output json cloudmonitor create-alarm-rule --region-id "{{user.region}}" --alarm-name "{{user.alarm_name}}" --namespace "{{user.namespace}}" --metric-name "{{user.metric_name}}" --resource-id "{{user.resource_id}}" --threshold 80.0 --evaluation-count 3` |
+| Output | `{{output.alarm_id}}` from `$.result.alarmId` |
 
-```bash
-# List all alarm rules
-ctyun --output json cloudmonitor describe-alarm-rules \
-  --region-id "{{user.region}}" \
-  --page-number 1 \
-  --page-size 50
+#### Op 2: DescribeAlarmRules (read-only)
 
-# Filter by alarm name
-ctyun --output json cloudmonitor describe-alarm-rules \
-  --region-id "{{user.region}}" \
-  --alarm-name "{{user.alarm_name}}"
-```
+| Aspect | Detail |
+|---|---|
+| SDK | `client.describe_alarm_rules(regionId="{{user.region}}", alarmId="opt", alarmName="opt", namespace="opt", pageNumber=1, pageSize=50)` |
+| CLI | `ctyun --output json cloudmonitor describe-alarm-rules --region-id "{{user.region}}" --page-number 1 --page-size 50` |
+| Fields | `$.result.alarms[*]` — alarmId, alarmName, status, namespace, metricName, threshold |
 
-#### Present to User
+#### Op 3: ModifyAlarmRule
 
-| Field | Path (SDK/CLI) | Notes |
-|-------|----------------|-------|
-| Alarm ID | `$.result.alarms[*].alarmId` | Unique identifier |
-| Alarm Name | `$.result.alarms[*].alarmName` | User-defined name |
-| Status | `$.result.alarms[*].status` | enabled/disabled |
-| Namespace | `$.result.alarms[*].namespace` | Metric namespace |
-| Metric | `$.result.alarms[*].metricName` | Monitored metric |
-| Threshold | `$.result.alarms[*].threshold` | Alert threshold |
+| Aspect | Detail |
+|---|---|
+| Pre-flight | Alarm exists (call DescribeAlarmRules); confirm with user |
+| SDK | `client.modify_alarm_rule(regionId="{{user.region}}", alarmId="{{output.alarm_id}}", ...)` — include only changed fields |
+| CLI | `ctyun --output json cloudmonitor modify-alarm-rule --region-id "{{user.region}}" --alarm-id "{{output.alarm_id}}" --threshold 90.0 --evaluation-count 5` |
+| Post-exec | Verify changes via DescribeAlarmRules |
 
----
+#### Op 4: DeleteAlarmRule (destructive)
 
-### Operation: ModifyAlarmRule
+| Aspect | Detail |
+|---|---|
+| ✅ Safety Gate | MUST obtain explicit confirmation: "Delete alarm `{{user.alarm_name}}` (ID: `{{user.alarm_id}}`)? This cannot be undone." Document config first via DescribeAlarmRules. |
+| SDK | `client.delete_alarm_rule(regionId="{{user.region}}", alarmId="{{user.alarm_id}}")` |
+| CLI | `ctyun --output json cloudmonitor delete-alarm-rule --region-id "{{user.region}}" --alarm-id "{{user.alarm_id}}"` |
+| Post-exec | Poll DescribeAlarmRules until absent (60s timeout) |
+| Failure | 404 => already deleted (report success); throttling/5xx retry 3× |
 
-#### Pre-flight Checks
+#### Op 5: QueryMetricData
 
-| Check | Method | Expected | On Failure |
-|-------|--------|----------|------------|
-| Alarm exists | Call DescribeAlarmRules with `{{user.alarm_id}}` | Alarm found | HALT; verify alarm ID |
-| User confirmation | Explicit confirmation for changes | Confirmed | HALT; wait for confirmation |
+| Aspect | Detail |
+|---|---|
+| Pre-flight | `start_time < end_time`; `period` in [60, 300, 3600, 86400] |
+| SDK | `client.query_metric_data(regionId="{{user.region}}", namespace="{{user.namespace}}", metricName="{{user.metric_name}}", resourceId="{{user.resource_id}}", startTime="...", endTime="...", period=300, statistic="Average")` |
+| CLI | `ctyun --output json cloudmonitor query-metric-data --region-id "{{user.region}}" --namespace "{{user.namespace}}" --metric-name "{{user.metric_name}}" --resource-id "{{user.resource_id}}" --start-time "ISO8601" --end-time "ISO8601" --period 300` |
+| Output | `$.result.datapoints[*].timestamp` → ISO8601, `.value` → number, `.unit` → string |
 
-#### Execution (Python SDK)
+#### Op 6: ListMetrics (read-only)
 
-```python
-from ctyun_sdk.services.cloudmonitor.apis.modify_alarm_rule import ModifyAlarmRuleRequest
+| Aspect | Detail |
+|---|---|
+| SDK | `client.list_metrics(regionId="{{user.region}}", namespace="opt")` |
+| CLI | `ctyun --output json cloudmonitor list-metrics --region-id "{{user.region}}" --namespace "{{user.namespace}}"` |
+| Output | `$.result.metrics[*]` → metricName, namespace, description, unit |
 
-req = ModifyAlarmRuleRequest(
-    regionId="{{user.region}}",
-    alarmId="{{output.alarm_id}}",
-    threshold=90.0,  # new threshold
-    evaluationCount=5  # new evaluation count
-    # Only include fields to modify; omit others
-)
-resp = client.modify_alarm_rule(req)
-```
+#### Op 7: ListAlarmHistory (read-only)
 
-#### Execution — CLI (`ctyun`)
+| Aspect | Detail |
+|---|---|
+| SDK | `client.list_alarm_history(regionId="{{user.region}}", alarmId="opt", startTime="...", endTime="...", pageNumber=1, pageSize=100)` |
+| CLI | `ctyun --output json cloudmonitor list-alarm-history --region-id "{{user.region}}" --start-time "ISO8601" --end-time "ISO8601" --page-number 1 --page-size 100` |
+| Output | `$.result.history[*]` → timestamp, alarmId, status (ALARM/OK/INSUFFICIENT_DATA), metricValue, reason |
 
-```bash
-ctyun --output json cloudmonitor modify-alarm-rule \
-  --region-id "{{user.region}}" \
-  --alarm-id "{{output.alarm_id}}" \
-  --threshold 90.0 \
-  --evaluation-count 5
-```
+#### Op 8: CreateAlarmBlacklist (requires `CTYUN_ACCOUNT_ID` env var)
 
-#### Post-execution Validation
+| Aspect | Detail |
+|---|---|
+| ⚠️ Prerequisite | Alarm Blacklist is a restricted-access feature; verify activation via customer manager. Uses Monitor v4 API (`monitor-global.ctapi.ctyun.cn`), not standard Cloud Monitor endpoint. |
+| Pre-flight | Feature enabled? Resource exists? No duplicate blacklist for same device+metric? |
+| SDK (`requests`) | `POST https://monitor-global.ctapi.ctyun.cn/v4/monitor/create-alarm-blacklist` — headers: `ctyun-account: {{env.CTYUN_ACCOUNT_ID}}`; body: `regionId, blacklistName, serviceType, deviceUUID, dimension, metrics, effectiveDuration, effectiveDurationUnit` |
+| CLI | `ctyun --output json monitor create-alarm-blacklist --region-id "{{user.region}}" --blacklist-name "..." --service-type "..." --device-uuid "..." --effective-duration 7 --effective-duration-unit day` |
+| Output | `{{output.blacklist_id}}` from `$.data.id`; verify via QueryAlarmBlacklists |
 
-1. Call **DescribeAlarmRules** to verify changes applied.
-2. Confirm new configuration matches requested changes.
+#### Op 9: QueryAlarmBlacklists (read-only, requires `CTYUN_ACCOUNT_ID`)
 
----
+| Aspect | Detail |
+|---|---|
+| Pre-flight | Feature activation check |
+| SDK (`requests`) | `GET https://monitor-global.ctapi.ctyun.cn/v4/monitor/query-alarm-blacklists` — params: `regionId, pageNo, pageSize, serviceType(opt), deviceUUID(opt)` |
+| CLI | `ctyun --output json monitor query-alarm-blacklist --region-id "{{user.region}}" --page-no 1 --page-size 50 [--service-type "..." --device-uuid "..."]` |
+| Output | `$.data.result[*]` → id, blacklistName, status (1=enabled), serviceType, deviceUUID, metrics; `$.data.totalCount` |
 
-### Operation: DeleteAlarmRule
+#### Op 10: ChangeAlarmBlacklistsStatus (destructive, requires `CTYUN_ACCOUNT_ID`)
 
-#### Pre-flight (Safety Gate)
+| Aspect | Detail |
+|---|---|
+| ✅ Safety Gate | Confirm: "Disable blacklist `{{blacklist_name}}` (ID: `{{user.blacklist_id}}`)? Notifications will resume." |
+| Pre-flight | Blacklist exists? Not already at target status? |
+| SDK (`requests`) | `POST https://monitor-global.ctapi.ctyun.cn/v4/monitor/change-alarm-blacklists-status` — body: `ids: ["{{user.blacklist_id}}"], status: 0\|1` |
+| CLI | `ctyun --output json monitor change-alarm-blacklists-status --ids "{{user.blacklist_id}}" --status 0\|1` |
+| Post-exec | Verify `$.code == "200"`; confirm via QueryAlarmBlacklists |
 
-**CRITICAL SAFETY REQUIREMENT:**
+#### Op 11: DeleteAlarmBlacklists (destructive, requires `CTYUN_ACCOUNT_ID`)
 
-- **MUST** obtain explicit confirmation: "Are you sure you want to permanently delete alarm rule `{{user.alarm_name}}` (ID: `{{user.alarm_id}}`)? This action cannot be undone."
-- **MUST NOT** proceed without clear user assent (e.g., "yes", "confirm", "delete").
-- Document the alarm configuration (call DescribeAlarmRules first) for potential recovery/recreation.
-
-#### Execution (Python SDK)
-
-```python
-from ctyun_sdk.services.cloudmonitor.apis.delete_alarm_rule import DeleteAlarmRuleRequest
-
-req = DeleteAlarmRuleRequest(
-    regionId="{{user.region}}",
-    alarmId="{{user.alarm_id}}"
-)
-resp = client.delete_alarm_rule(req)
-```
-
-#### Execution — CLI (`ctyun`)
-
-```bash
-ctyun --output json cloudmonitor delete-alarm-rule \
-  --region-id "{{user.region}}" \
-  --alarm-id "{{user.alarm_id}}"
-```
-
-#### Post-execution Validation
-
-1. Poll **DescribeAlarmRules** until the alarm is no longer returned (404 or absent from list).
-2. Timeout after 60 seconds if alarm still appears.
-3. Report deletion success or failure to user.
-
-#### Failure Recovery
-
-| Error pattern | Max retries | Backoff | Agent Action |
-|--------------|-------------|---------|--------------|
-| `ResourceNotFound` / 404 | 0 | — | Alarm already deleted; report success |
-| Throttling / 429 | 3 | exponential | Back off; retry |
-| `InternalError` / 5xx | 3 | 2s, 4s, 8s | Retry; then HALT |
+| Aspect | Detail |
+|---|---|
+| ✅ Safety Gate | Confirm: "Permanently delete blacklist `{{blacklist_name}}` (ID: `{{user.blacklist_id}}`)? Suppression removed. Cannot be undone." Document config first via QueryAlarmBlacklists. |
+| Pre-flight | Blacklist exists? |
+| SDK (`requests`) | `POST https://monitor-global.ctapi.ctyun.cn/v4/monitor/delete-alarm-blacklists` — body: `ids: ["{{user.blacklist_id}}"]` |
+| CLI | `ctyun --output json monitor delete-alarm-blacklists --ids "{{user.blacklist_id}}"` |
+| Post-exec | Poll QueryAlarmBlacklists until absent (60s timeout) |
+| Failure | 404 => already deleted (report success); throttling/5xx retry 3× |
 
 ---
-
-### Operation: QueryMetricData
-
-#### Pre-flight Checks
-
-| Check | Method | Expected | On Failure |
-|-------|--------|----------|------------|
-| Valid time range | Start time < End time | Range valid | HALT; fix time range |
-| Supported period | Period in [60, 300, 3600, 86400] | Valid period | Adjust to nearest valid |
-
-#### Execution (Python SDK)
-
-```python
-from ctyun_sdk.services.cloudmonitor.apis.query_metric_data import QueryMetricDataRequest
-from datetime import datetime, timedelta
-
-req = QueryMetricDataRequest(
-    regionId="{{user.region}}",
-    namespace="{{user.namespace}}",
-    metricName="{{user.metric_name}}",
-    resourceId="{{user.resource_id}}",
-    startTime=(datetime.now() - timedelta(hours=1)).isoformat(),
-    endTime=datetime.now().isoformat(),
-    period=300,  # 5 minutes
-    statistic="Average"
-)
-resp = client.query_metric_data(req)
-```
-
-#### Execution — CLI (`ctyun`)
-
-```bash
-ctyun --output json cloudmonitor query-metric-data \
-  --region-id "{{user.region}}" \
-  --namespace "{{user.namespace}}" \
-  --metric-name "{{user.metric_name}}" \
-  --resource-id "{{user.resource_id}}" \
-  --start-time "2026-06-05T00:00:00Z" \
-  --end-time "2026-06-05T01:00:00Z" \
-  --period 300 \
-  --statistic Average
-```
-
-#### Present to User
-
-| Field | Path (SDK/CLI) | Notes |
-|-------|----------------|-------|
-| Timestamps | `$.result.datapoints[*].timestamp` | ISO 8601 format |
-| Values | `$.result.datapoints[*].value` | Metric values |
-| Unit | `$.result.unit` | Percent, Bytes, Count, etc. |
-
----
-
-### Operation: ListMetrics
-
-#### Execution (Python SDK)
-
-```python
-from ctyun_sdk.services.cloudmonitor.apis.list_metrics import ListMetricsRequest
-
-req = ListMetricsRequest(
-    regionId="{{user.region}}",
-    namespace="{{user.namespace}}"  # optional: filter by namespace
-)
-resp = client.list_metrics(req)
-```
-
-#### Execution — CLI (`ctyun`)
-
-```bash
-ctyun --output json cloudmonitor list-metrics \
-  --region-id "{{user.region}}" \
-  --namespace "{{user.namespace}}"
-```
-
-#### Present to User
-
-| Field | Path (SDK/CLI) | Notes |
-|-------|----------------|-------|
-| Metric Name | `$.result.metrics[*].metricName` | Available metric name |
-| Namespace | `$.result.metrics[*].namespace` | Metric namespace |
-| Description | `$.result.metrics[*].description` | Human-readable description |
-| Unit | `$.result.metrics[*].unit` | Default unit |
-
----
-
-### Operation: ListAlarmHistory
-
-#### Execution (Python SDK)
-
-```python
-from ctyun_sdk.services.cloudmonitor.apis.list_alarm_history import ListAlarmHistoryRequest
-from datetime import datetime, timedelta
-
-req = ListAlarmHistoryRequest(
-    regionId="{{user.region}}",
-    alarmId="{{user.alarm_id}}",  # optional: filter by alarm
-    startTime=(datetime.now() - timedelta(days=7)).isoformat(),
-    endTime=datetime.now().isoformat(),
-    pageNumber=1,
-    pageSize=100
-)
-resp = client.list_alarm_history(req)
-```
-
-#### Execution — CLI (`ctyun`)
-
-```bash
-ctyun --output json cloudmonitor list-alarm-history \
-  --region-id "{{user.region}}" \
-  --start-time "2026-05-29T00:00:00Z" \
-  --end-time "2026-06-05T00:00:00Z" \
-  --page-number 1 \
-  --page-size 100
-```
-
-#### Present to User
-
-| Field | Path (SDK/CLI) | Notes |
-|-------|----------------|-------|
-| Timestamp | `$.result.history[*].timestamp` | Event time |
-| Alarm ID | `$.result.history[*].alarmId` | Related alarm rule |
-| Status | `$.result.history[*].status` | ALARM/OK/INSUFFICIENT_DATA |
-| Metric Value | `$.result.history[*].metricValue` | Value at trigger |
-| Reason | `$.result.history[*].reason` | Trigger reason |
-
----
-
-### Operation: CreateAlarmBlacklist
-
-#### Prerequisites
-
-- **Feature activation:** Alarm Blacklist is a "受限开放" (restricted access) feature. Verify that the CTyun customer manager has enabled it for this account before proceeding.
-- **Endpoint:** This operation uses the Monitor v4 API endpoint (`monitor-global.ctapi.ctyun.cn`), not the standard Cloud Monitor API endpoint. Authentication requires AK/SK signature headers.
-
-#### Pre-flight Checks
-
-| Check | Method | Expected | On Failure |
-|-------|--------|----------|------------|
-| Feature activation | Confirm via customer manager or existing blacklist query | Feature enabled | HALT; advise user to request activation |
-| Resource exists | Verify `{{user.device_uuid}}` exists in target service | Resource found | HALT; verify resource ID |
-| Duplicate check | Query existing blacklists for the same device+metric | No duplicate | HALT; blacklist already exists for this combination |
-
-#### Execution (SDK — `requests`)
-
-```python
-import requests
-import json
-
-url = "https://monitor-global.ctapi.ctyun.cn/v4/monitor/create-alarm-blacklist"
-headers = {
-    "Content-Type": "application/json",
-    # Auth headers — see CTyun Monitor v4 auth docs
-    "ctyun-account": "{{env.CTYUN_ACCOUNT_ID}}",
-}
-
-payload = {
-    "regionId": "{{user.region}}",
-    "blacklistName": "{{user.blacklist_name}}",
-    "serviceType": "{{user.service_type}}",
-    "deviceUUID": "{{user.device_uuid}}",
-    "dimension": "InstanceId",
-    "metrics": "{{user.metric_name}}",   # optional: empty = all metrics
-    "effectiveDuration": 7,
-    "effectiveDurationUnit": "day"
-}
-
-resp = requests.post(url, headers=headers, json=payload)
-result = resp.json()
-```
-
-#### Execution — CLI (`ctyun`)
-
-```bash
-ctyun --output json monitor create-alarm-blacklist \
-  --region-id "{{user.region}}" \
-  --blacklist-name "{{user.blacklist_name}}" \
-  --service-type "{{user.service_type}}" \
-  --device-uuid "{{user.device_uuid}}" \
-  --dimension "InstanceId" \
-  --metrics "{{user.metric_name}}" \
-  --effective-duration 7 \
-  --effective-duration-unit day
-```
-
-#### Post-execution Validation
-
-1. Read `{{output.blacklist_id}}` from `$.data.id` in the response.
-2. Call **QueryAlarmBlacklists** to verify the blacklist exists and status is `1` (enabled).
-3. On success, report `{{output.blacklist_id}}` to the user.
-4. On failure, go to **Failure Recovery**.
-
-#### Failure Recovery
-
-| Error pattern | Max retries | Backoff | Agent Action |
-|--------------|-------------|---------|--------------|
-| `code != "200"` / 400 invalid input | 0–1 | — | Fix args from API spec; retry once if safe |
-| `ResourceNotFound` / 404 | 0 | — | HALT; verify device UUID |
-| Throttling / rate limit | 3 | exponential | Back off; respect rate limits |
-| `InternalError` / 5xx | 3 | 2s, 4s, 8s | Retry; then HALT |
-
----
-
-### Operation: QueryAlarmBlacklists
-
-#### Pre-flight Checks
-
-| Check | Method | Expected | On Failure |
-|-------|--------|----------|------------|
-| Feature activation | Same as CreateAlarmBlacklist | Feature enabled | HALT; advise user to request activation |
-
-#### Execution (SDK — `requests`)
-
-```python
-import requests
-
-url = "https://monitor-global.ctapi.ctyun.cn/v4/monitor/query-alarm-blacklists"
-params = {
-    "regionId": "{{user.region}}",
-    "pageNo": 1,
-    "pageSize": 50,
-}
-# Optional filters
-if "{{user.service_type}}":
-    params["serviceType"] = "{{user.service_type}}"
-if "{{user.device_uuid}}":
-    params["deviceUUID"] = "{{user.device_uuid}}"
-
-headers = {
-    "ctyun-account": "{{env.CTYUN_ACCOUNT_ID}}",
-}
-
-resp = requests.get(url, headers=headers, params=params)
-result = resp.json()
-```
-
-#### Execution — CLI (`ctyun`)
-
-```bash
-# List all blacklists
-ctyun --output json monitor query-alarm-blacklist \
-  --region-id "{{user.region}}" \
-  --page-no 1 \
-  --page-size 50
-
-# Filter by service type
-ctyun --output json monitor query-alarm-blacklist \
-  --region-id "{{user.region}}" \
-  --service-type "{{user.service_type}}"
-
-# Filter by device UUID
-ctyun --output json monitor query-alarm-blacklist \
-  --region-id "{{user.region}}" \
-  --device-uuid "{{user.device_uuid}}"
-```
-
-#### Present to User
-
-| Field | Path (API/CLI) | Notes |
-|-------|----------------|-------|
-| Blacklist ID | `$.data.result[*].id` | Unique identifier |
-| Blacklist Name | `$.data.result[*].blacklistName` | User-defined name |
-| Status | `$.data.result[*].status` | 1=enabled, 0=disabled |
-| Service Type | `$.data.result[*].serviceType` | ECS, RDS, etc. |
-| Resource ID | `$.data.result[*].deviceUUID` | Blacklisted resource |
-| Metric | `$.data.result[*].metrics` | Suppressed metric (empty=all) |
-| Total Count | `$.data.totalCount` | Total matching records |
-
----
-
-### Operation: ChangeAlarmBlacklistsStatus
-
-#### Pre-flight (Safety Gate)
-
-**CRITICAL SAFETY REQUIREMENT:**
-
-- **Disabling an alarm blacklist** will **resume notifications** for previously suppressed resources. Confirm: "Are you sure you want to disable alarm blacklist `{{blacklist_name}}` (ID: `{{user.blacklist_id}}`)? Notifications for the blacklisted resource will resume immediately."
-- **Re-enabling** is less critical but still requires explicit confirmation if the blacklist was disabled by another operator.
-- **MUST NOT** proceed without clear user assent (e.g., "yes", "confirm", "disable").
-
-#### Pre-flight Checks
-
-| Check | Method | Expected | On Failure |
-|-------|--------|----------|------------|
-| Blacklist exists | QueryAlarmBlacklists by ID | Blacklist found | HALT; verify blacklist ID |
-| Current status | QueryAlarmBlacklists returns status | Not already at target | HALT; already in desired state |
-
-#### Execution (SDK — `requests`)
-
-```python
-import requests
-
-url = "https://monitor-global.ctapi.ctyun.cn/v4/monitor/change-alarm-blacklists-status"
-headers = {
-    "Content-Type": "application/json",
-    "ctyun-account": "{{env.CTYUN_ACCOUNT_ID}}",
-}
-
-payload = {
-    "ids": ["{{user.blacklist_id}}"],
-    "status": 0   # 0 = disable, 1 = enable
-}
-
-resp = requests.post(url, headers=headers, json=payload)
-result = resp.json()
-```
-
-#### Execution — CLI (`ctyun`)
-
-```bash
-# Disable blacklist
-ctyun --output json monitor change-alarm-blacklists-status \
-  --ids "{{user.blacklist_id}}" \
-  --status 0
-
-# Enable blacklist
-ctyun --output json monitor change-alarm-blacklists-status \
-  --ids "{{user.blacklist_id}}" \
-  --status 1
-```
-
-#### Post-execution Validation
-
-1. Verify `$.code == "200"` in the response.
-2. Call **QueryAlarmBlacklists** to confirm the status changed.
-3. Report the new status to the user.
-
-#### Failure Recovery
-
-| Error pattern | Max retries | Backoff | Agent Action |
-|--------------|-------------|---------|--------------|
-| `code != "200"` / 400 | 0–1 | — | Check blacklist ID and status value |
-| `ResourceNotFound` / 404 | 0 | — | Blacklist may have been deleted; HALT |
-| Throttling / 429 | 3 | exponential | Back off; retry |
-
----
-
-### Operation: DeleteAlarmBlacklists
-
-#### Pre-flight (Safety Gate)
-
-**CRITICAL SAFETY REQUIREMENT:**
-
-- **MUST** obtain explicit confirmation: "Are you sure you want to permanently delete alarm blacklist `{{blacklist_name}}` (ID: `{{user.blacklist_id}}`)? The resource will no longer be suppressed and notifications will resume. This action cannot be undone."
-- **MUST NOT** proceed without clear user assent (e.g., "yes", "confirm", "delete").
-- Document the blacklist configuration (call QueryAlarmBlacklists first) for potential recovery/recreation.
-
-#### Pre-flight Checks
-
-| Check | Method | Expected | On Failure |
-|-------|--------|----------|------------|
-| Blacklist exists | QueryAlarmBlacklists by ID | Blacklist found | HALT; already deleted |
-
-#### Execution (SDK — `requests`)
-
-```python
-import requests
-
-url = "https://monitor-global.ctapi.ctyun.cn/v4/monitor/delete-alarm-blacklists"
-headers = {
-    "Content-Type": "application/json",
-    "ctyun-account": "{{env.CTYUN_ACCOUNT_ID}}",
-}
-
-payload = {
-    "ids": ["{{user.blacklist_id}}"]
-}
-
-resp = requests.post(url, headers=headers, json=payload)
-result = resp.json()
-```
-
-#### Execution — CLI (`ctyun`)
-
-```bash
-ctyun --output json monitor delete-alarm-blacklists \
-  --ids "{{user.blacklist_id}}"
-```
-
-#### Post-execution Validation
-
-1. Verify `$.code == "200"` in the response.
-2. Poll **QueryAlarmBlacklists** until the blacklist is no longer returned.
-3. Timeout after 60 seconds if blacklist still appears.
-4. Report deletion success or failure to user.
-
-#### Failure Recovery
-
-| Error pattern | Max retries | Backoff | Agent Action |
-|--------------|-------------|---------|--------------|
-| `code != "200"` / 400 | 0–1 | — | Verify blacklist ID |
-| `ResourceNotFound` / 404 | 0 | — | Already deleted; report success |
-| Throttling / 429 | 3 | exponential | Back off; retry |
-| `InternalError` / 5xx | 3 | 2s, 4s, 8s | Retry; then HALT |
 
 ## Prerequisites
 

@@ -44,7 +44,7 @@ A collection of **AI Agent Skill definitions** (structured Markdown documents fo
 | GCL Phase 1 (validate on shipped skills) | **Complete** |
 | GCL Phase 2 (Orchestrator: `scripts/gcl_runner.py`) | **Shipped** |
 | GCL Phase 3 (Quality dashboard) | **Shipped** |
-| GCL Phase 4 (Alarm wiring) | Planned |
+| GCL Phase 4 (Alarm wiring) | **Shipped** |
 
 ---
 

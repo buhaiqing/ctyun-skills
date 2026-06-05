@@ -989,8 +989,11 @@ on a non-`sdk-only` skill is a **blocker** for merge.
 > mock contexts; Safety=0 → ABORT verified. 19/20 skills parse operations from
 > SKILL.md; cloudmonitor, vpc, and 3 new read-only skills use alternative
 > and fall back to inference. No real cloud credentials required.
+> **Phase 4 Complete** (2026-06-05): `scripts/gcl_monitor_alarms.py`
+> evaluates trace metrics against thresholds (P0: safety>0, P1: pass rate<70%,
+> P2: avg iterations>2.8) with cooldown and auto-mute logic.
 >
-> **Status:** Phases 2–4 are **planned** below:
+> **Status:** All phases complete below:
 
 - **Phase 1 — Validate on shipped skills.** Exercise GCL end-to-end on
   `ctyun-skill-generator` and `ctyun-cloudmonitor-ops` requests: produce
@@ -1006,7 +1009,8 @@ on a non-`sdk-only` skill is a **blocker** for merge.
   [`docs/GCL_RETROSPECTIVE.md`](docs/GCL_RETROSPECTIVE.md)). Supports text and
   JSON output modes. **Complete.**
 - **Phase 4 — Alarm wiring.** Wire rubric pass-rate to Cloud Monitor alarms
-  (real incidents refine thresholds).
+  (real incidents refine thresholds). **Complete:** `scripts/gcl_monitor_alarms.py`
+  evaluates traces against P0/P1/P2 thresholds with cooldown and auto-mute.
 
 ### 11. Changelog
 

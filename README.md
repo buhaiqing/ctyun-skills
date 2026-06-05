@@ -30,6 +30,12 @@ A collection of **AI Agent Skill definitions** (structured Markdown documents fo
 | [`ctyun-mysql-ops`](ctyun-mysql-ops/) — MySQL | **Shipped** (v1.0.0) |
 | [`ctyun-postgresql-ops`](ctyun-postgresql-ops/) — PostgreSQL | **Shipped** (v1.0.0) |
 | [`ctyun-mongodb-ops`](ctyun-mongodb-ops/) — MongoDB | **Shipped** (v1.0.0) |
+| [`ctyun-dns-ops`](ctyun-dns-ops/) — DNS | **Shipped** (v1.0.0) |
+| [`ctyun-cdn-ops`](ctyun-cdn-ops/) — CDN | **Shipped** (v1.0.0) |
+| [`ctyun-waf-ops`](ctyun-waf-ops/) — WAF | **Shipped** (v1.0.0) |
+| [`ctyun-ssl-cert-ops`](ctyun-ssl-cert-ops/) — SSL Certificate | **Shipped** (v1.0.0) |
+| [`ctyun-bastion-ops`](ctyun-bastion-ops/) — Cloud Bastion Host | **Shipped** (v1.0.0) |
+| [`ctyun-cloudaudit-ops`](ctyun-cloudaudit-ops/) — Cloud Audit | **Shipped** (v1.0.0) |
 | Other `ctyun-*-ops` product skills | **Planned** |
 | GCL Phase 1 (validate on shipped skills) | **In Progress** |
 | GCL Phase 2 (Orchestrator: `scripts/gcl_runner.py`) | Planned |
@@ -52,6 +58,12 @@ A collection of **AI Agent Skill definitions** (structured Markdown documents fo
 | [ctyun-cce-ops](ctyun-cce-ops/) | CCE | Cluster/node/task lifecycle management | **required** | `ctyun-cce-ops/` |
 | [ctyun-kms-ops](ctyun-kms-ops/) | KMS | Key lifecycle (create/encrypt/decrypt/schedule-delete) | **required** | `ctyun-kms-ops/` |
 | [ctyun-oos-ops](ctyun-oos-ops/) | OOS | Object storage, bucket CRUD, file upload/download | **required** | `ctyun-oos-ops/` |
+| [ctyun-dns-ops](ctyun-dns-ops/) | DNS | Domain management, record set CRUD via REST API | **required** | `ctyun-dns-ops/` |
+| [ctyun-cdn-ops](ctyun-cdn-ops/) | CDN | Acceleration domain lifecycle, cache config, refresh/prefetch, HTTPS, ACL | **required** | `ctyun-cdn-ops/` |
+| [ctyun-waf-ops](ctyun-waf-ops/) | WAF | Instance/domain/rule/ACL management, attack log query | **required** | `ctyun-waf-ops/` |
+| [ctyun-ssl-cert-ops](ctyun-ssl-cert-ops/) | SSL Certificate | Certificate lifecycle (apply/upload/delete/deploy/expiry) | **required** | `ctyun-ssl-cert-ops/` |
+| [ctyun-bastion-ops](ctyun-bastion-ops/) | Cloud Bastion Host | Instance/user/host/policy management | **required** | `ctyun-bastion-ops/` |
+| [ctyun-cloudaudit-ops](ctyun-cloudaudit-ops/) | Cloud Audit | Log query, export, statistics (read-only) | optional | `ctyun-cloudaudit-ops/` |
 
 ---
 
@@ -191,6 +203,78 @@ ctyun-skills/
 │       └── troubleshooting.md
 ├── ctyun-oos-ops/                          # Shipped: OOS
 │   ├── SKILL.md
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-dns-ops/                          # Shipped: DNS
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-cdn-ops/                          # Shipped: CDN
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-waf-ops/                          # Shipped: WAF
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-ssl-cert-ops/                     # Shipped: SSL Certificate
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-bastion-ops/                      # Shipped: Cloud Bastion Host
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-cloudaudit-ops/                   # Shipped: Cloud Audit
+│   ├── SKILL.md
+│   ├── assets/
 │   └── references/
 │       ├── api-sdk-usage.md
 │       ├── cli-usage.md
@@ -368,6 +452,12 @@ python3 scripts/preflight-check.py --verbose --fix
 - [EIP Skill](ctyun-eip-ops/SKILL.md)
 - [CCE Skill](ctyun-cce-ops/SKILL.md)
 - [OOS Skill](ctyun-oos-ops/SKILL.md)
+- [DNS Skill](ctyun-dns-ops/SKILL.md)
+- [CDN Skill](ctyun-cdn-ops/SKILL.md)
+- [WAF Skill](ctyun-waf-ops/SKILL.md)
+- [SSL Certificate Skill](ctyun-ssl-cert-ops/SKILL.md)
+- [Cloud Bastion Host Skill](ctyun-bastion-ops/SKILL.md)
+- [Cloud Audit Skill](ctyun-cloudaudit-ops/SKILL.md)
 - [KMS Skill](ctyun-kms-ops/SKILL.md)
 - [CLI-First Decision Matrix](ctyun-skill-generator/references/cli-decision-matrix.md)
 - [GCL Rubric](ctyun-skill-generator/references/rubric.md)

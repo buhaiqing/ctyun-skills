@@ -9,8 +9,11 @@
 > **Status:** The **meta-skill**, **`ctyun-cloudmonitor-ops`**, **`ctyun-ecs-ops`**,
 > **`ctyun-iam-ops`**, **`ctyun-redis-ops`**, **`ctyun-elb-ops`**, **`ctyun-eip-ops`**,
 > **`ctyun-cce-ops`**, **`ctyun-kms-ops`**, **`ctyun-oos-ops`**, **`ctyun-rds-ops`**,
-> **`ctyun-mysql-ops`**, **`ctyun-postgresql-ops`**, and **`ctyun-mongodb-ops`** are shipped.
-> Other product skills are **planned** and will be produced
+> **`ctyun-mysql-ops`**, **`ctyun-postgresql-ops`**, **`ctyun-mongodb-ops`**,
+> **`ctyun-dns-ops`**, **`ctyun-cdn-ops`**, **`ctyun-waf-ops`**,
+> **`ctyun-ssl-cert-ops`**, **`ctyun-bastion-ops`**, and
+> **`ctyun-cloudaudit-ops`** are shipped.
+> Most other product skills are **planned** and will be produced
 > by `ctyun-skill-generator`. The layout here reflects what is **currently on disk**.
 
 ```
@@ -151,6 +154,78 @@ ctyun-skills/
 │       ├── rubric.md
 │       └── troubleshooting.md
 ├── ctyun-postgresql-ops/                           # Shipped: PostgreSQL data operations
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-dns-ops/                                   # Shipped: DNS operations
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-cdn-ops/                                   # Shipped: CDN operations
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-waf-ops/                                   # Shipped: WAF operations
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-ssl-cert-ops/                              # Shipped: SSL Certificate operations
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-bastion-ops/                               # Shipped: Cloud Bastion Host operations
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-cloudaudit-ops/                            # Shipped: Cloud Audit operations
 │   ├── SKILL.md
 │   ├── assets/
 │   └── references/
@@ -444,9 +519,10 @@ Common content that appears in more than one skill MUST be factored:
 > **Status:** `ctyun-skill-generator`, `ctyun-cloudmonitor-ops`,
 > `ctyun-ecs-ops`, `ctyun-iam-ops`, `ctyun-redis-ops`, `ctyun-elb-ops`,
 > `ctyun-eip-ops`, `ctyun-cce-ops`, `ctyun-kms-ops`, `ctyun-oos-ops`,
-> `ctyun-rds-ops`, `ctyun-mysql-ops`, `ctyun-postgresql-ops`, and
-> `ctyun-mongodb-ops` are **Shipped**.
-> The delegation table below reflects the current inventory.
+> `ctyun-rds-ops`, `ctyun-mysql-ops`, `ctyun-postgresql-ops`,
+> `ctyun-mongodb-ops`, `ctyun-dns-ops`, `ctyun-cdn-ops`,
+> `ctyun-waf-ops`, `ctyun-ssl-cert-ops`, `ctyun-bastion-ops`, and
+> `ctyun-cloudaudit-ops` are **Shipped**.
 
 | If they ask about | Delegate to | Status |
 |---|---|---|
@@ -464,6 +540,12 @@ Common content that appears in more than one skill MUST be factored:
 | MySQL SQL queries, DDL/DML, user management | `ctyun-mysql-ops` | **Shipped** |
 | PostgreSQL SQL queries, DDL/DML, role management | `ctyun-postgresql-ops` | **Shipped** |
 | MongoDB instance CRUD, queries, aggregations | `ctyun-mongodb-ops` | **Shipped** |
+| DNS domain management, record set CRUD | `ctyun-dns-ops` | **Shipped** |
+| CDN acceleration domain lifecycle, cache config, refresh/prefetch, HTTPS | `ctyun-cdn-ops` | **Shipped** |
+| WAF instance/domain/rule/ACL management | `ctyun-waf-ops` | **Shipped** |
+| SSL certificate lifecycle (apply/upload/delete/deploy/expiry) | `ctyun-ssl-cert-ops` | **Shipped** |
+| Cloud Bastion Host instance/user/host/policy management | `ctyun-bastion-ops` | **Shipped** |
+| Cloud Audit log query, export, statistics (read-only) | `ctyun-cloudaudit-ops` | **Shipped** |
 | Alert analysis, suppression, reporting | `ctyun-alert-intelligence` | Planned (read-only) |
 
 - `ctyun-alert-intelligence` (planned) is **read-only** — it analyzes alerts but delegates alarm rule changes back to `ctyun-cloudmonitor-ops`.
@@ -787,7 +869,9 @@ Return strict JSON:
 > **Status:** `ctyun-skill-generator`, `ctyun-cloudmonitor-ops`, `ctyun-ecs-ops`,
 > `ctyun-iam-ops`, `ctyun-redis-ops`, `ctyun-elb-ops`, `ctyun-eip-ops`,
 > `ctyun-cce-ops`, `ctyun-kms-ops`, `ctyun-oos-ops`, `ctyun-rds-ops`,
-> `ctyun-mysql-ops`, `ctyun-postgresql-ops`, and `ctyun-mongodb-ops` are **Shipped**.
+> `ctyun-mysql-ops`, `ctyun-postgresql-ops`, `ctyun-mongodb-ops`,
+> `ctyun-dns-ops`, `ctyun-cdn-ops`, `ctyun-waf-ops`, `ctyun-ssl-cert-ops`,
+> `ctyun-bastion-ops`, and `ctyun-cloudaudit-ops` are **Shipped**.
 > All other rows are **Planned** defaults the meta-skill will apply when it
 > produces the corresponding `ctyun-*-ops` skill. They are documented here so
 > the generator has a single source of truth — **not** as a current inventory.
@@ -810,6 +894,12 @@ Return strict JSON:
 | `ctyun-mysql-ops` | **required** | 2 | DROP / DELETE / TRUNCATE; see [`ctyun-mysql-ops/SKILL.md` §Quality Gate](ctyun-mysql-ops/SKILL.md#quality-gate-gcl) for the live parameters |
 | `ctyun-postgresql-ops` | **required** | 2 | DROP / DELETE / TRUNCATE; see [`ctyun-postgresql-ops/SKILL.md` §Quality Gate](ctyun-postgresql-ops/SKILL.md#quality-gate-gcl) for the live parameters |
 | `ctyun-mongodb-ops` | **required** | 2 | dropDatabase / delete; see [`ctyun-mongodb-ops/SKILL.md` §Quality Gate](ctyun-mongodb-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-dns-ops` | **required** | 2 | delete domain/record can disrupt production DNS; see [`ctyun-dns-ops/SKILL.md` §Quality Gate](ctyun-dns-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-cdn-ops` | **required** | 2 | delete/disable domain can break live traffic; see [`ctyun-cdn-ops/SKILL.md` §Quality Gate](ctyun-cdn-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-waf-ops` | **required** | 2 | domain/rule/ACL delete can disrupt protection; see [`ctyun-waf-ops/SKILL.md` §Quality Gate](ctyun-waf-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-ssl-cert-ops` | **required** | 2 | delete certificate can break HTTPS; see [`ctyun-ssl-cert-ops/SKILL.md` §Quality Gate](ctyun-ssl-cert-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-bastion-ops` | **required** | 2 | delete/restart instance can block access; see [`ctyun-bastion-ops/SKILL.md` §Quality Gate](ctyun-bastion-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-cloudaudit-ops` | optional | 3 | read-only; see [`ctyun-cloudaudit-ops/SKILL.md` §Quality Gate](ctyun-cloudaudit-ops/SKILL.md#quality-gate-gcl) for the live parameters |
 
 #### Planned (generator will apply on first creation)
 
@@ -901,6 +991,12 @@ on a non-`sdk-only` skill is a **blocker** for merge.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.19.0 | 2026-06-05 | Ship `ctyun-cloudaudit-ops`: Cloud Audit log query, export, statistics via REST API with SDK-only and GCL quality gate (read-only, optional GCL) |
+| 1.18.0 | 2026-06-05 | Ship `ctyun-bastion-ops`: Cloud Bastion Host instance/user/host/policy management via REST API with SDK-only and GCL quality gate |
+| 1.17.0 | 2026-06-05 | Ship `ctyun-ssl-cert-ops`: SSL certificate lifecycle (apply/upload/delete/deploy/expiry) via REST API with SDK-only and GCL quality gate |
+| 1.16.0 | 2026-06-05 | Ship `ctyun-waf-ops`: WAF instance/domain/rule/ACL management via REST API with SDK-only and GCL quality gate |
+| 1.15.0 | 2026-06-05 | Ship `ctyun-cdn-ops`: CDN acceleration domain lifecycle, cache config, refresh/prefetch, HTTPS, ACL via REST API with SDK-only and GCL quality gate |
+| 1.14.0 | 2026-06-05 | Ship `ctyun-dns-ops`: DNS domain management and record set CRUD via REST API with SDK-only and GCL quality gate |
 | 1.13.0 | 2026-06-05 | Ship `ctyun-mongodb-ops`: MongoDB instance CRUD via REST API + data operations via mongosh CLI with SDK-only and GCL quality gate |
 | 1.12.0 | 2026-06-05 | Ship `ctyun-postgresql-ops`: PostgreSQL SQL queries, DDL/DML, role management via psql CLI with SDK-only and GCL quality gate |
 | 1.11.0 | 2026-06-05 | Ship `ctyun-mysql-ops`: MySQL SQL queries, DDL/DML, user management via mysql CLI with SDK-only and GCL quality gate |

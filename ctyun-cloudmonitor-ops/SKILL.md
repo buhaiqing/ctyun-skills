@@ -16,7 +16,7 @@ compatibility: >-
   operations (dual-path skill).
 metadata:
   author: ctyun
-  version: "1.0.0"
+  version: "1.1.0"
   last_updated: "2026-06-05"
   runtime: Harness AI Agent
   api_profile: "CTyun Cloud Monitor API v1 - OpenAPI: https://www.ctyun.cn/document/10029510"
@@ -30,6 +30,7 @@ metadata:
     - CTYUN_ACCESS_KEY
     - CTYUN_SECRET_KEY
     - CTYUN_REGION
+    - CTYUN_ACCOUNT_ID
 ---
 
 > This skill follows the [Agent Skill OpenSpec](https://agentskills.io/specification).
@@ -45,6 +46,7 @@ Cloud Monitor (云监控) on CTyun provides comprehensive monitoring capabilitie
 | Resource | Description | Key Operations |
 |----------|-------------|----------------|
 | Alarm Rule | Defines metric thresholds and notification actions | Create, Describe, Modify, Delete |
+| Alarm Blacklist | Suppresses notifications for specific resources/metrics without disabling the alarm rule | Create, Query, Update, Change Status, Delete |
 | Metric Data | Time-series monitoring data from cloud resources | Query, List |
 | Alarm History | Historical alarm events and status changes | List, Describe |
 
@@ -93,6 +95,11 @@ Structured placeholders reduce injection ambiguity and unsafe prompts:
 | `{{output.alarm_id}}` | From CreateAlarmRule response | Parse per OpenAPI/SDK or verified `ctyun --output json` path |
 | `{{output.metric_data}}` | From QueryMetricData response | Parse per API response structure |
 | `{{output.alarm_history}}` | From ListAlarmHistory response | Parse per API response structure |
+| `{{user.blacklist_name}}` | User-supplied blacklist name | Ask once; reuse |
+| `{{user.service_type}}` | Cloud service type (ECS, RDS, etc.) | Ask once; reuse |
+| `{{user.device_uuid}}` | Resource ID to blacklist | Ask once; reuse |
+| `{{output.blacklist_id}}` | From CreateAlarmBlacklist response | Parse from `$.data.id` |
+| `{{output.blacklist_records}}` | From QueryAlarmBlacklists response | Parse from `$.data.result` |
 
 > **`{{env.*}}` MUST NOT** be collected from the user. **`{{user.*}}`** MUST be collected interactively when missing.
 
@@ -129,6 +136,20 @@ Structured placeholders reduce injection ambiguity and unsafe prompts:
 | ListAlarmHistory | `$.result.history[*].status` | `$.result.history[*].status` | array | Alarm status (ALARM, OK, INSUFFICIENT_DATA) |
 | ListAlarmHistory | `$.result.history[*].timestamp` | `$.result.history[*].timestamp` | array | Event timestamp |
 
+### Alarm Blacklist Operations
+
+| Operation | JSON Path (SDK/API) | JSON Path (CLI) | Type | Description |
+|-----------|---------------------|-----------------|------|-------------|
+| CreateAlarmBlacklist | `$.data.id` | `$.data.id` | string | New blacklist ID |
+| QueryAlarmBlacklists | `$.data.result[*].id` | `$.data.result[*].id` | array | Blacklist IDs |
+| QueryAlarmBlacklists | `$.data.result[*].blacklistName` | `$.data.result[*].blacklistName` | array | Blacklist names |
+| QueryAlarmBlacklists | `$.data.result[*].status` | `$.data.result[*].status` | array | Blacklist status (0=disabled, 1=enabled) |
+| QueryAlarmBlacklists | `$.data.result[*].deviceUUID` | `$.data.result[*].deviceUUID` | array | Blacklisted resource IDs |
+| QueryAlarmBlacklists | `$.data.totalCount` | `$.data.totalCount` | int | Total matching records |
+| UpdateAlarmBlacklist | `$.code` | `$.code` | string | "200" = success |
+| ChangeAlarmBlacklistsStatus | `$.code` | `$.code` | string | "200" = success |
+| DeleteAlarmBlacklists | `$.code` | `$.code` | string | "200" = success |
+
 ### Expected State Transitions
 
 | Operation | Initial State | Target State | Poll Interval | Max Wait |
@@ -138,6 +159,9 @@ Structured placeholders reduce injection ambiguity and unsafe prompts:
 | EnableAlarmRule | `disabled` | `enabled` | N/A | Immediate |
 | DisableAlarmRule | `enabled` | `disabled` | N/A | Immediate |
 | DeleteAlarmRule | any stable state | absent | 5s | 60s |
+| CreateAlarmBlacklist | — | `enabled` (status=1) | N/A | Immediate |
+| ChangeAlarmBlacklistsStatus | any | `enabled` (1) or `disabled` (0) | N/A | Immediate |
+| DeleteAlarmBlacklists | any | absent | 5s | 60s |
 
 ## Execution Flows (Agent-Readable)
 
@@ -484,6 +508,275 @@ ctyun --output json cloudmonitor list-alarm-history \
 | Metric Value | `$.result.history[*].metricValue` | Value at trigger |
 | Reason | `$.result.history[*].reason` | Trigger reason |
 
+---
+
+### Operation: CreateAlarmBlacklist
+
+#### Prerequisites
+
+- **Feature activation:** Alarm Blacklist is a "受限开放" (restricted access) feature. Verify that the CTyun customer manager has enabled it for this account before proceeding.
+- **Endpoint:** This operation uses the Monitor v4 API endpoint (`monitor-global.ctapi.ctyun.cn`), not the standard Cloud Monitor API endpoint. Authentication requires AK/SK signature headers.
+
+#### Pre-flight Checks
+
+| Check | Method | Expected | On Failure |
+|-------|--------|----------|------------|
+| Feature activation | Confirm via customer manager or existing blacklist query | Feature enabled | HALT; advise user to request activation |
+| Resource exists | Verify `{{user.device_uuid}}` exists in target service | Resource found | HALT; verify resource ID |
+| Duplicate check | Query existing blacklists for the same device+metric | No duplicate | HALT; blacklist already exists for this combination |
+
+#### Execution (SDK — `requests`)
+
+```python
+import requests
+import json
+
+url = "https://monitor-global.ctapi.ctyun.cn/v4/monitor/create-alarm-blacklist"
+headers = {
+    "Content-Type": "application/json",
+    # Auth headers — see CTyun Monitor v4 auth docs
+    "ctyun-account": "{{env.CTYUN_ACCOUNT_ID}}",
+}
+
+payload = {
+    "regionId": "{{user.region}}",
+    "blacklistName": "{{user.blacklist_name}}",
+    "serviceType": "{{user.service_type}}",
+    "deviceUUID": "{{user.device_uuid}}",
+    "dimension": "InstanceId",
+    "metrics": "{{user.metric_name}}",   # optional: empty = all metrics
+    "effectiveDuration": 7,
+    "effectiveDurationUnit": "day"
+}
+
+resp = requests.post(url, headers=headers, json=payload)
+result = resp.json()
+```
+
+#### Execution — CLI (`ctyun`)
+
+```bash
+ctyun --output json monitor create-alarm-blacklist \
+  --region-id "{{user.region}}" \
+  --blacklist-name "{{user.blacklist_name}}" \
+  --service-type "{{user.service_type}}" \
+  --device-uuid "{{user.device_uuid}}" \
+  --dimension "InstanceId" \
+  --metrics "{{user.metric_name}}" \
+  --effective-duration 7 \
+  --effective-duration-unit day
+```
+
+#### Post-execution Validation
+
+1. Read `{{output.blacklist_id}}` from `$.data.id` in the response.
+2. Call **QueryAlarmBlacklists** to verify the blacklist exists and status is `1` (enabled).
+3. On success, report `{{output.blacklist_id}}` to the user.
+4. On failure, go to **Failure Recovery**.
+
+#### Failure Recovery
+
+| Error pattern | Max retries | Backoff | Agent Action |
+|--------------|-------------|---------|--------------|
+| `code != "200"` / 400 invalid input | 0–1 | — | Fix args from API spec; retry once if safe |
+| `ResourceNotFound` / 404 | 0 | — | HALT; verify device UUID |
+| Throttling / rate limit | 3 | exponential | Back off; respect rate limits |
+| `InternalError` / 5xx | 3 | 2s, 4s, 8s | Retry; then HALT |
+
+---
+
+### Operation: QueryAlarmBlacklists
+
+#### Pre-flight Checks
+
+| Check | Method | Expected | On Failure |
+|-------|--------|----------|------------|
+| Feature activation | Same as CreateAlarmBlacklist | Feature enabled | HALT; advise user to request activation |
+
+#### Execution (SDK — `requests`)
+
+```python
+import requests
+
+url = "https://monitor-global.ctapi.ctyun.cn/v4/monitor/query-alarm-blacklists"
+params = {
+    "regionId": "{{user.region}}",
+    "pageNo": 1,
+    "pageSize": 50,
+}
+# Optional filters
+if "{{user.service_type}}":
+    params["serviceType"] = "{{user.service_type}}"
+if "{{user.device_uuid}}":
+    params["deviceUUID"] = "{{user.device_uuid}}"
+
+headers = {
+    "ctyun-account": "{{env.CTYUN_ACCOUNT_ID}}",
+}
+
+resp = requests.get(url, headers=headers, params=params)
+result = resp.json()
+```
+
+#### Execution — CLI (`ctyun`)
+
+```bash
+# List all blacklists
+ctyun --output json monitor query-alarm-blacklist \
+  --region-id "{{user.region}}" \
+  --page-no 1 \
+  --page-size 50
+
+# Filter by service type
+ctyun --output json monitor query-alarm-blacklist \
+  --region-id "{{user.region}}" \
+  --service-type "{{user.service_type}}"
+
+# Filter by device UUID
+ctyun --output json monitor query-alarm-blacklist \
+  --region-id "{{user.region}}" \
+  --device-uuid "{{user.device_uuid}}"
+```
+
+#### Present to User
+
+| Field | Path (API/CLI) | Notes |
+|-------|----------------|-------|
+| Blacklist ID | `$.data.result[*].id` | Unique identifier |
+| Blacklist Name | `$.data.result[*].blacklistName` | User-defined name |
+| Status | `$.data.result[*].status` | 1=enabled, 0=disabled |
+| Service Type | `$.data.result[*].serviceType` | ECS, RDS, etc. |
+| Resource ID | `$.data.result[*].deviceUUID` | Blacklisted resource |
+| Metric | `$.data.result[*].metrics` | Suppressed metric (empty=all) |
+| Total Count | `$.data.totalCount` | Total matching records |
+
+---
+
+### Operation: ChangeAlarmBlacklistsStatus
+
+#### Pre-flight (Safety Gate)
+
+**CRITICAL SAFETY REQUIREMENT:**
+
+- **Disabling an alarm blacklist** will **resume notifications** for previously suppressed resources. Confirm: "Are you sure you want to disable alarm blacklist `{{blacklist_name}}` (ID: `{{user.blacklist_id}}`)? Notifications for the blacklisted resource will resume immediately."
+- **Re-enabling** is less critical but still requires explicit confirmation if the blacklist was disabled by another operator.
+- **MUST NOT** proceed without clear user assent (e.g., "yes", "confirm", "disable").
+
+#### Pre-flight Checks
+
+| Check | Method | Expected | On Failure |
+|-------|--------|----------|------------|
+| Blacklist exists | QueryAlarmBlacklists by ID | Blacklist found | HALT; verify blacklist ID |
+| Current status | QueryAlarmBlacklists returns status | Not already at target | HALT; already in desired state |
+
+#### Execution (SDK — `requests`)
+
+```python
+import requests
+
+url = "https://monitor-global.ctapi.ctyun.cn/v4/monitor/change-alarm-blacklists-status"
+headers = {
+    "Content-Type": "application/json",
+    "ctyun-account": "{{env.CTYUN_ACCOUNT_ID}}",
+}
+
+payload = {
+    "ids": ["{{user.blacklist_id}}"],
+    "status": 0   # 0 = disable, 1 = enable
+}
+
+resp = requests.post(url, headers=headers, json=payload)
+result = resp.json()
+```
+
+#### Execution — CLI (`ctyun`)
+
+```bash
+# Disable blacklist
+ctyun --output json monitor change-alarm-blacklists-status \
+  --ids "{{user.blacklist_id}}" \
+  --status 0
+
+# Enable blacklist
+ctyun --output json monitor change-alarm-blacklists-status \
+  --ids "{{user.blacklist_id}}" \
+  --status 1
+```
+
+#### Post-execution Validation
+
+1. Verify `$.code == "200"` in the response.
+2. Call **QueryAlarmBlacklists** to confirm the status changed.
+3. Report the new status to the user.
+
+#### Failure Recovery
+
+| Error pattern | Max retries | Backoff | Agent Action |
+|--------------|-------------|---------|--------------|
+| `code != "200"` / 400 | 0–1 | — | Check blacklist ID and status value |
+| `ResourceNotFound` / 404 | 0 | — | Blacklist may have been deleted; HALT |
+| Throttling / 429 | 3 | exponential | Back off; retry |
+
+---
+
+### Operation: DeleteAlarmBlacklists
+
+#### Pre-flight (Safety Gate)
+
+**CRITICAL SAFETY REQUIREMENT:**
+
+- **MUST** obtain explicit confirmation: "Are you sure you want to permanently delete alarm blacklist `{{blacklist_name}}` (ID: `{{user.blacklist_id}}`)? The resource will no longer be suppressed and notifications will resume. This action cannot be undone."
+- **MUST NOT** proceed without clear user assent (e.g., "yes", "confirm", "delete").
+- Document the blacklist configuration (call QueryAlarmBlacklists first) for potential recovery/recreation.
+
+#### Pre-flight Checks
+
+| Check | Method | Expected | On Failure |
+|-------|--------|----------|------------|
+| Blacklist exists | QueryAlarmBlacklists by ID | Blacklist found | HALT; already deleted |
+
+#### Execution (SDK — `requests`)
+
+```python
+import requests
+
+url = "https://monitor-global.ctapi.ctyun.cn/v4/monitor/delete-alarm-blacklists"
+headers = {
+    "Content-Type": "application/json",
+    "ctyun-account": "{{env.CTYUN_ACCOUNT_ID}}",
+}
+
+payload = {
+    "ids": ["{{user.blacklist_id}}"]
+}
+
+resp = requests.post(url, headers=headers, json=payload)
+result = resp.json()
+```
+
+#### Execution — CLI (`ctyun`)
+
+```bash
+ctyun --output json monitor delete-alarm-blacklists \
+  --ids "{{user.blacklist_id}}"
+```
+
+#### Post-execution Validation
+
+1. Verify `$.code == "200"` in the response.
+2. Poll **QueryAlarmBlacklists** until the blacklist is no longer returned.
+3. Timeout after 60 seconds if blacklist still appears.
+4. Report deletion success or failure to user.
+
+#### Failure Recovery
+
+| Error pattern | Max retries | Backoff | Agent Action |
+|--------------|-------------|---------|--------------|
+| `code != "200"` / 400 | 0–1 | — | Verify blacklist ID |
+| `ResourceNotFound` / 404 | 0 | — | Already deleted; report success |
+| Throttling / 429 | 3 | exponential | Back off; retry |
+| `InternalError` / 5xx | 3 | 2s, 4s, 8s | Retry; then HALT |
+
 ## Prerequisites
 
 > **Python 3.10+ is REQUIRED.** We recommend Python 3.10 for maximum compatibility with CTyun SDK and CLI.
@@ -531,14 +824,14 @@ This skill participates in the repository-wide **Generator-Critic-Loop** (GCL) d
 | `max_iterations` | **3** | `AGENTS.md` §8 default for `ctyun-cloudmonitor-ops` (recommended) |
 | `rubric_version` | `v1` | see [references/rubric.md](references/rubric.md) |
 | `trace_path` | `./audit-results/gcl-trace-YYYYMMDD-HHMMSS.json` | unified with `ctyun-audit-ops` |
-| `safety_confirm_required` | **true** | `true` for any destructive op; DeleteAlarmRule is destructive |
+| `safety_confirm_required` | **true** | `true` for any destructive op; DeleteAlarmRule, DeleteAlarmBlacklists, and ChangeAlarmBlacklistsStatus are destructive |
 | `fallback_decision_table` | inline in SKILL.md §CLI-First Policy | reference to CLI-first decision table; required when any operation has `cli_applicability: sdk-only` |
 
 ### GCL Rubric Dimensions
 
 | Dimension | Threshold | Scale | Notes |
 |-----------|-----------|-------|-------|
-| Correctness | ≥ 0.5 (1.0 for DeleteAlarmRule) | 0 / 0.5 / 1 | Alarm rule ID/state correct |
+| Correctness | ≥ 0.5 (1.0 for destructive ops: DeleteAlarmRule, DeleteAlarmBlacklists) | 0 / 0.5 / 1 | Resource ID/state correct |
 | Safety | = 1 | 0 / 1 | Delete operations confirmed; no secret leakage |
 | Idempotency | ≥ 0.5 | 0 / 0.5 / 1 | Retry-safe for metric queries |
 | Traceability | ≥ 0.5 | 0 / 0.5 / 1 | All operations logged |
@@ -595,9 +888,13 @@ See [references/rubric.md](references/rubric.md) for detailed scoring rules and 
 - **Threshold tuning:** Start with conservative thresholds and adjust based on historical data; avoid alert fatigue.
 - **Notification channels:** Configure multiple notification channels (SMS, email) for critical alarms.
 - **Cleanup:** Regularly review and delete obsolete alarm rules to stay within quota limits.
+- **Blacklist hygiene:** Prefer time-limited blacklists (`effectiveDuration`) over permanent ones to prevent forgotten suppressions.
+- **Blacklist naming:** Use descriptive names that include the reason and duration (e.g., `maintenance-ecs-web01-7d-202606`) for easier auditing.
+- **Blacklist vs Disable:** Use blacklists for temporary, targeted suppressions (specific resource/metric); use alarm rule disable/enable for broad, permanent silencing.
 
 ## Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.0 | 2026-06-05 | Added alarm blacklist operations: Create/Query/Update/ChangeStatus/Delete with SDK (requests-based) + CLI (monitor subcommand) dual-path; new core-concepts "Alarm Blacklist" section; new API mappings in api-sdk-usage.md; GCL safety gates updated for blacklist destructive ops |
 | 1.0.0 | 2026-06-05 | Initial Cloud Monitor skill with Create/Describe/Modify/Delete AlarmRule, Query/List MetricData, ListAlarmHistory operations; dual-path (ctyun CLI + SDK); GCL quality gate with max_iter=3 |

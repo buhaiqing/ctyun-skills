@@ -72,6 +72,18 @@ printf "%s" "default" > /tmp/ctyun-home/.ctyun/current
 |------|---------------------------|-------|
 | List History | `ctyun --output json cloudmonitor list-alarm-history --region-id <region> --start-time <iso> --end-time <iso>` | Optional filter by alarm-id |
 
+### Alarm Blacklist Operations (Monitor CLI)
+
+> **Note:** Alarm blacklist operations use the `ctyun-cli monitor` subcommand (not `ctyun cloudmonitor`), as blacklists are managed via the Monitor v4 API endpoint (`monitor-global.ctapi.ctyun.cn`) rather than the Cloud Monitor API endpoint. Authentication still uses `~/.ctyun/config`.
+
+| Goal | Example `ctyun` invocation | Notes |
+|------|---------------------------|-------|
+| Query Blacklists | `ctyun --output json monitor query-alarm-blacklist --region-id <region>` | Supports pagination and filters |
+| Create Blacklist | `ctyun --output json monitor create-alarm-blacklist --region-id <region> --blacklist-name <name> --service-type <type> --device-uuid <id> --dimension <key> [--metrics <metric>]` | Verify CLI subcommand name |
+| Update Blacklist | `ctyun --output json monitor update-alarm-blacklist --id <bl-id> [--blacklist-name <name>]` | Verify CLI subcommand name |
+| Change Status | `ctyun --output json monitor change-alarm-blacklists-status --ids <id> --status 0\|1` | Verify CLI subcommand name |
+| Delete Blacklist | `ctyun --output json monitor delete-alarm-blacklists --ids <id>` | Requires confirmation |
+
 ## JSON Output Paths (Verified)
 
 ### CreateAlarmRule Response

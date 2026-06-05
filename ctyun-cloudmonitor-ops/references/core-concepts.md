@@ -143,6 +143,71 @@ Example with 300s period:
 | Metric Value | Value at time of transition |
 | Reason | Human-readable explanation |
 
+### 12. Alarm Blacklist (告警黑名单)
+
+An **alarm blacklist** provides granular suppression of alarm notifications for specific resources or metrics **without** disabling the entire alarm rule. This enables operators to mute noisy alerts for individual instances during maintenance, batch processing, or known transient issues while keeping the alarm rule active for other resources.
+
+**How it works:**
+
+Alarm blacklists sit between Alarm Rules and Notifications:
+
+```
+Alarm Rule (active)
+    │
+    ▼ triggers
+Alarm State (ALARM)
+    │
+    ├─ Blacklist match? → Notification SUPPRESSED
+    └─ No match → Notification SENT
+```
+
+**Blacklist Dimensions:**
+
+| Dimension | Description | Example |
+|-----------|-------------|---------|
+| serviceType | Cloud service type | ECS, RDS, SLB |
+| dimension | Resource identifier key | InstanceId, DBInstanceId |
+| deviceUUID | Specific resource ID | i-xxxxxxxx, rm-xxxxxxxx |
+| metrics | Metric to suppress (empty = all metrics) | CPUUtilization, MemoryUtilization |
+
+**Blacklist Granularity:**
+
+| Level | Scope | Use Case |
+|-------|-------|----------|
+| Resource-level | All metrics for one resource | Mute all alerts during maintenance |
+| Metric-level | One metric on one resource | Mute CPU alarm for a known busy instance |
+| Service-level | All resources of one service type | Service-wide maintenance window |
+
+**Blacklist Status:**
+
+| Status | Value | Meaning |
+|--------|-------|---------|
+| Enabled | 1 | Blacklist is active; notifications are suppressed |
+| Disabled | 0 | Blacklist exists but is paused; notifications pass through |
+
+**Effective Duration:**
+
+Blacklists can be configured with a time-limited effective duration (in days, months, or years). After expiration, the blacklist auto-expires and notifications resume.
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| effectiveDuration | Duration value | 7 |
+| effectiveDurationUnit | Unit: day, month, year | day |
+
+**Key Use Cases:**
+
+1. **Maintenance window:** Blacklist an ECS instance during patching to avoid false alerts
+2. **Known noisy metric:** Suppress CPU alerts for a batch-processing instance that runs at 100% during off-peak hours
+3. **Incident containment:** Blacklist a resource temporarily while root cause is investigated
+4. **Migrating workloads:** Blacklist instances being migrated to prevent alert storms
+
+**Important limitations:**
+
+- Blacklists only **suppress notifications** — the alarm rule still evaluates and records ALARM state in history
+- The blacklist feature is "受限开放" (restricted access) and must be enabled by a CTyun customer manager
+- Blacklists are region-scoped (one blacklist applies to resources in a single region)
+- Maximum blacklist entries per region: pending confirmation via CTyun support
+
 ## Architecture
 
 ```

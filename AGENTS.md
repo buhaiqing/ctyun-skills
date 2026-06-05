@@ -311,6 +311,13 @@ python3 scripts/preflight-check.py --verbose
 
 **Note**: The `ctyun-cli` package installs `ctyun-cli` binary, not `ctyun`. The symlink ensures backward compatibility with documentation.
 
+### Git Worktree Development Workflow
+
+> See full conventions in [`docs/git-worktree-workflow.md`](docs/git-worktree-workflow.md).
+>
+> All development **MUST** use isolated git worktrees to protect the `main` branch.
+> Direct edits on `main` are discouraged for non-trivial changes.
+
 ### Credentials
 
 Three methods (priority order: shell env > `.env` > `~/.ctyun/config`):

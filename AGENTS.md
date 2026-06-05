@@ -8,7 +8,8 @@
 
 > **Status:** The **meta-skill**, **`ctyun-cloudmonitor-ops`**, **`ctyun-ecs-ops`**,
 > **`ctyun-iam-ops`**, **`ctyun-redis-ops`**, **`ctyun-elb-ops`**, **`ctyun-eip-ops`**,
-> **`ctyun-cce-ops`**, and **`ctyun-kms-ops`** are shipped.
+> **`ctyun-cce-ops`**, **`ctyun-kms-ops`**, **`ctyun-oos-ops`**, **`ctyun-rds-ops`**,
+> **`ctyun-mysql-ops`**, **`ctyun-postgresql-ops`**, and **`ctyun-mongodb-ops`** are shipped.
 > Other product skills are **planned** and will be produced
 > by `ctyun-skill-generator`. The layout here reflects what is **currently on disk**.
 
@@ -114,7 +115,54 @@ ctyun-skills/
 │       ├── prompt-templates.md
 │       ├── rubric.md
 │       └── troubleshooting.md
-└── ctyun-kms-ops/                                  # Shipped: KMS operations
+├── ctyun-oos-ops/                                  # Shipped: OOS operations
+│   ├── SKILL.md
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-rds-ops/                                  # Shipped: RDS operations
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-mysql-ops/                                # Shipped: MySQL data operations
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-postgresql-ops/                           # Shipped: PostgreSQL data operations
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+└── ctyun-mongodb-ops/                              # Shipped: MongoDB operations
     ├── SKILL.md
     ├── assets/
     └── references/
@@ -344,7 +392,7 @@ Every `SKILL.md` uses:
 | Inline code blocks in SKILL.md | 50 lines each | 200 lines | Truncate with `…` and link to the full snippet in `assets/` |
 
 > The caps are checked by `scripts/check_skill_size.py` (planned, see
-> [§Validation](##validation)). Soft cap is a PR comment; hard cap is a
+> [§Validation](#validation)). Soft cap is a PR comment; hard cap is a
 > **blocker**.
 
 ### Style Rules
@@ -395,7 +443,9 @@ Common content that appears in more than one skill MUST be factored:
 
 > **Status:** `ctyun-skill-generator`, `ctyun-cloudmonitor-ops`,
 > `ctyun-ecs-ops`, `ctyun-iam-ops`, `ctyun-redis-ops`, `ctyun-elb-ops`,
-> `ctyun-eip-ops`, `ctyun-cce-ops`, and `ctyun-kms-ops` are **Shipped**.
+> `ctyun-eip-ops`, `ctyun-cce-ops`, `ctyun-kms-ops`, `ctyun-oos-ops`,
+> `ctyun-rds-ops`, `ctyun-mysql-ops`, `ctyun-postgresql-ops`, and
+> `ctyun-mongodb-ops` are **Shipped**.
 > The delegation table below reflects the current inventory.
 
 | If they ask about | Delegate to | Status |
@@ -409,7 +459,11 @@ Common content that appears in more than one skill MUST be factored:
 | Elastic IP lifecycle (allocate/associate/disassociate/release) | `ctyun-eip-ops` | **Shipped** |
 | CCE cluster/node/task management | `ctyun-cce-ops` | **Shipped** |
 | Key management, encryption | `ctyun-kms-ops` | **Shipped** |
-| RDS instance CRUD | `ctyun-rds-ops` | Planned |
+| Object storage, bucket CRUD, file upload/download | `ctyun-oos-ops` | **Shipped** |
+| RDS instance CRUD | `ctyun-rds-ops` | **Shipped** |
+| MySQL SQL queries, DDL/DML, user management | `ctyun-mysql-ops` | **Shipped** |
+| PostgreSQL SQL queries, DDL/DML, role management | `ctyun-postgresql-ops` | **Shipped** |
+| MongoDB instance CRUD, queries, aggregations | `ctyun-mongodb-ops` | **Shipped** |
 | Alert analysis, suppression, reporting | `ctyun-alert-intelligence` | Planned (read-only) |
 
 - `ctyun-alert-intelligence` (planned) is **read-only** — it analyzes alerts but delegates alarm rule changes back to `ctyun-cloudmonitor-ops`.
@@ -732,7 +786,8 @@ Return strict JSON:
 
 > **Status:** `ctyun-skill-generator`, `ctyun-cloudmonitor-ops`, `ctyun-ecs-ops`,
 > `ctyun-iam-ops`, `ctyun-redis-ops`, `ctyun-elb-ops`, `ctyun-eip-ops`,
-> `ctyun-cce-ops`, and `ctyun-kms-ops` are **Shipped**.
+> `ctyun-cce-ops`, `ctyun-kms-ops`, `ctyun-oos-ops`, `ctyun-rds-ops`,
+> `ctyun-mysql-ops`, `ctyun-postgresql-ops`, and `ctyun-mongodb-ops` are **Shipped**.
 > All other rows are **Planned** defaults the meta-skill will apply when it
 > produces the corresponding `ctyun-*-ops` skill. They are documented here so
 > the generator has a single source of truth — **not** as a current inventory.
@@ -750,15 +805,16 @@ Return strict JSON:
 | `ctyun-eip-ops` | **required** | 2 | release EIP can break production; see [`ctyun-eip-ops/SKILL.md` §Quality Gate](ctyun-eip-ops/SKILL.md#quality-gate-gcl) for the live parameters |
 | `ctyun-cce-ops` | **required** | 2 | cluster delete / node drain are destructive; see [`ctyun-cce-ops/SKILL.md` §Quality Gate](ctyun-cce-ops/SKILL.md#quality-gate-gcl) for the live parameters |
 | `ctyun-kms-ops` | **required** | 2 | schedule key deletion is irreversible; see [`ctyun-kms-ops/SKILL.md` §Quality Gate](ctyun-kms-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-oos-ops` | **required** | 2 | delete bucket/object can cause data loss; see [`ctyun-oos-ops/SKILL.md` §Quality Gate](ctyun-oos-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-rds-ops` | **required** | 2 | instance delete can cause data loss; see [`ctyun-rds-ops/SKILL.md` §Quality Gate](ctyun-rds-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-mysql-ops` | **required** | 2 | DROP / DELETE / TRUNCATE; see [`ctyun-mysql-ops/SKILL.md` §Quality Gate](ctyun-mysql-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-postgresql-ops` | **required** | 2 | DROP / DELETE / TRUNCATE; see [`ctyun-postgresql-ops/SKILL.md` §Quality Gate](ctyun-postgresql-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-mongodb-ops` | **required** | 2 | dropDatabase / delete; see [`ctyun-mongodb-ops/SKILL.md` §Quality Gate](ctyun-mongodb-ops/SKILL.md#quality-gate-gcl) for the live parameters |
 
 #### Planned (generator will apply on first creation)
 
 | Skill | GCL | Default max_iter | Notes |
 |---|---|---|---|
-| `ctyun-rds-ops` | **required** | 2 | instance delete / parameter group changes |
-| `ctyun-mysql-ops` | **required** | 2 | DROP / DELETE / TRUNCATE |
-| `ctyun-postgresql-ops` | **required** | 2 | DROP / DELETE / TRUNCATE |
-| `ctyun-mongodb-ops` | **required** | 2 | dropDatabase / delete |
 | `ctyun-alert-intelligence` | optional | 5 | read-only |
 | `ctyun-audit-ops` | optional | 5 | read-only |
 | `ctyun-tag-audit-ops` | optional | 5 | read-only |
@@ -845,6 +901,11 @@ on a non-`sdk-only` skill is a **blocker** for merge.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.13.0 | 2026-06-05 | Ship `ctyun-mongodb-ops`: MongoDB instance CRUD via REST API + data operations via mongosh CLI with SDK-only and GCL quality gate |
+| 1.12.0 | 2026-06-05 | Ship `ctyun-postgresql-ops`: PostgreSQL SQL queries, DDL/DML, role management via psql CLI with SDK-only and GCL quality gate |
+| 1.11.0 | 2026-06-05 | Ship `ctyun-mysql-ops`: MySQL SQL queries, DDL/DML, user management via mysql CLI with SDK-only and GCL quality gate |
+| 1.10.0 | 2026-06-05 | Ship `ctyun-rds-ops`: RDS instance lifecycle (create/delete/resize/backup/restore) via REST API with SDK-only and GCL quality gate |
+| 1.9.0 | 2026-06-05 | Ship `ctyun-oos-ops`: Object-Oriented Storage bucket/object lifecycle operations with SDK-only and GCL quality gate |
 | 1.8.0 | 2026-06-05 | Ship `ctyun-kms-ops`: KMS key lifecycle operations (create/encrypt/decrypt/schedule-delete) with dual-path and GCL quality gate |
 | 1.7.0 | 2026-06-05 | Ship `ctyun-cce-ops`: CCE cluster node/task operations (create/delete/resize/list) with dual-path and GCL quality gate |
 | 1.6.0 | 2026-06-05 | Ship `ctyun-eip-ops`: Elastic IP lifecycle operations (allocate/associate/disassociate/release) with dual-path and GCL quality gate |

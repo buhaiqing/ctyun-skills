@@ -25,7 +25,12 @@ A collection of **AI Agent Skill definitions** (structured Markdown documents fo
 | [`ctyun-eip-ops`](ctyun-eip-ops/) — EIP | **Shipped** (v1.0.0) |
 | [`ctyun-cce-ops`](ctyun-cce-ops/) — CCE | **Shipped** (v1.0.0) |
 | [`ctyun-kms-ops`](ctyun-kms-ops/) — KMS | **Shipped** (v1.0.0) |
-| Other `ctyun-*-ops` product skills | **Planned** (4 skills) |
+| [`ctyun-oos-ops`](ctyun-oos-ops/) — OOS | **Shipped** (v1.0.0) |
+| [`ctyun-rds-ops`](ctyun-rds-ops/) — RDS | **Shipped** (v1.0.0) |
+| [`ctyun-mysql-ops`](ctyun-mysql-ops/) — MySQL | **Shipped** (v1.0.0) |
+| [`ctyun-postgresql-ops`](ctyun-postgresql-ops/) — PostgreSQL | **Shipped** (v1.0.0) |
+| [`ctyun-mongodb-ops`](ctyun-mongodb-ops/) — MongoDB | **Shipped** (v1.0.0) |
+| Other `ctyun-*-ops` product skills | **Planned** |
 | GCL Phase 1 (validate on shipped skills) | **In Progress** |
 | GCL Phase 2 (Orchestrator: `scripts/gcl_runner.py`) | Planned |
 | GCL Phase 3 (Quality dashboard) | Planned |
@@ -46,6 +51,7 @@ A collection of **AI Agent Skill definitions** (structured Markdown documents fo
 | [ctyun-eip-ops](ctyun-eip-ops/) | Elastic IP | IP lifecycle (allocate/associate/disassociate/release) | **required** | `ctyun-eip-ops/` |
 | [ctyun-cce-ops](ctyun-cce-ops/) | CCE | Cluster/node/task lifecycle management | **required** | `ctyun-cce-ops/` |
 | [ctyun-kms-ops](ctyun-kms-ops/) | KMS | Key lifecycle (create/encrypt/decrypt/schedule-delete) | **required** | `ctyun-kms-ops/` |
+| [ctyun-oos-ops](ctyun-oos-ops/) | OOS | Object storage, bucket CRUD, file upload/download | **required** | `ctyun-oos-ops/` |
 
 ---
 
@@ -55,9 +61,7 @@ Skills that `ctyun-skill-generator` will produce, ordered by priority:
 
 | Skill | Product | GCL | max_iter |
 |---|---|---|---|
-| `ctyun-rds-ops` | RDS | required | 2 |
 | `ctyun-alert-intelligence` | Alert Analysis (read-only) | optional | 5 |
-| `ctyun-mysql-ops` / `ctyun-postgresql-ops` / `ctyun-mongodb-ops` | Database series | required | 2 |
 
 > Full 12-item list with `max_iter` defaults in [`AGENTS.md` §GCL §8](AGENTS.md#8-per-skill-defaults).
 
@@ -164,6 +168,29 @@ ctyun-skills/
 ├── ctyun-cce-ops/                          # Shipped: CCE
 │   ├── SKILL.md
 │   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-cce-ops/                          # Shipped: CCE
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-oos-ops/                          # Shipped: OOS
+│   ├── SKILL.md
 │   └── references/
 │       ├── api-sdk-usage.md
 │       ├── cli-usage.md
@@ -340,6 +367,7 @@ python3 scripts/preflight-check.py --verbose --fix
 - [ELB Skill](ctyun-elb-ops/SKILL.md)
 - [EIP Skill](ctyun-eip-ops/SKILL.md)
 - [CCE Skill](ctyun-cce-ops/SKILL.md)
+- [OOS Skill](ctyun-oos-ops/SKILL.md)
 - [KMS Skill](ctyun-kms-ops/SKILL.md)
 - [CLI-First Decision Matrix](ctyun-skill-generator/references/cli-decision-matrix.md)
 - [GCL Rubric](ctyun-skill-generator/references/rubric.md)

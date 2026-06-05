@@ -1,0 +1,18 @@
+{
+  // CTyun Skills Farm markdownlint configuration
+  // See https://github.com/DavidAnson/markdownlint for rule reference
+
+  "default": true,
+
+  // MD013 - Line length: relaxed to 120 for table content
+  "MD013": {
+    "line_length": 120,
+    "code_block_line_length": 120
+  },
+
+  // MD033 - Inline HTML: allowed (used in AGENTS.md for status formatting)
+  "MD033": false,
+
+  // MD060 - Table column style: relaxed to allow compact tables
+  "MD060": false
+}

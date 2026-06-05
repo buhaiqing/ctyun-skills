@@ -1,5 +1,7 @@
 # CTyun Skills Farm
 
+[![中文文档](https://img.shields.io/badge/%E4%B8%AD%E6%96%87-README_CN.md-blue)](README_CN.md)
+
 A collection of **AI Agent Skill definitions** (structured Markdown documents following the
 [Agent Skills OpenSpec](https://agentskills.io/specification)) that enable AI agents to perform
 **CTyun (天翼云)** cloud operations. Each skill maps to one CTyun product, follows a
@@ -92,6 +94,7 @@ Skills that `ctyun-skill-generator` will produce, ordered by priority:
 ```
 ctyun-skills/
 ├── README.md                               # This file
+├── README_CN.md                            # Chinese translation of this README
 ├── AGENTS.md                               # Repository charter (CLI-First, GCL, Token Efficiency, Doc Integrity)
 ├── LICENSE                                 # MIT
 ├── pyproject.toml                          # Python project metadata (uv-managed)

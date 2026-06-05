@@ -91,9 +91,17 @@ ctyun-[product]-ops/                  # ← produced by ctyun-skill-generator
 uv venv --python 3.10
 source .venv/bin/activate
 uv pip install ctyun-cli ctyun-sdk
+
+# Create symlink for compatibility (ctyun-cli → ctyun)
+ln -sf $(which ctyun-cli) ~/.local/bin/ctyun
+
+# Verify installation
+python3 scripts/preflight-check.py --verbose
 ```
 
 `pyproject.toml` pins `ctyun-cli>=1.0.0`. The default pip index is `https://pypi.org/simple/` (configured under `[tool.uv]`).
+
+**Note**: The `ctyun-cli` package installs `ctyun-cli` binary, not `ctyun`. The symlink ensures backward compatibility with documentation.
 
 ### Credentials
 
@@ -131,8 +139,9 @@ These are the most common agent mistakes — get them right every time:
 
 | Rule | Wrong | Correct |
 |------|-------|---------|
-| `--output json` placement | `ctyun ecs list --output json` | `ctyun --output json ecs list` |
-| `--no-interactive` flag | `ctyun --no-interactive ecs delete` | **Omit entirely** — not supported |
+| **Command name** | `ctyun` (assumed) | `ctyun-cli` (actual binary); create symlink: `ln -sf $(which ctyun-cli) ~/.local/bin/ctyun` |
+| `--output json` placement | `ctyun-cli ecs list --output json` | `ctyun-cli --output json ecs list` |
+| `--no-interactive` flag | `ctyun-cli --no-interactive ecs delete` | **Omit entirely** — not supported |
 | Credentials | `export CTYUN_ACCESS_KEY=...` (CLI ignores) | Must write `~/.ctyun/config` INI file |
 | `~/.ctyun/current` newline | `echo "default" > file` (adds newline) | `printf "%s" "default" > file` (no trailing newline) |
 
@@ -140,10 +149,35 @@ These are the most common agent mistakes — get them right every time:
 
 **ctyun-first with SDK fallback** — the repository-wide policy:
 
-1. Try `ctyun --output json <command>` first
-2. On failure, retry up to 3 times with exponential backoff (0s → 2s → 4s)
-3. After 3 consecutive failures, fall back to Python SDK (`ctyun_sdk`)
-4. Document which path was used
+### Pre-flight Environment Check (Mandatory)
+
+Before any operation, run the intelligent preflight check:
+```bash
+python3 scripts/preflight-check.py --verbose --fix
+```
+
+This checks:
+1. ✅ Python 3.10+ compatibility
+2. ✅ `ctyun-cli` installation (creates `ctyun` symlink if missing)
+3. ✅ Credential configuration (`.env`, `~/.ctyun/config`, or env vars)
+4. ✅ Basic CLI functionality
+
+### CLI Execution Flow
+
+1. **Pre-flight**: Run `scripts/preflight-check.py`; fix any Environment-class issues
+2. **Primary path**: Try `ctyun-cli --output json <command>` first (or `ctyun` if symlink exists)
+3. **Retry**: On failure, retry up to 3 times with exponential backoff (0s → 2s → 4s)
+4. **Fallback**: After 3 consecutive failures, fall back to Python SDK (`ctyun_sdk`)
+5. **Documentation**: Record which path was used in execution trace
+
+### Command Name Resolution
+
+The `ctyun-cli` package installs `ctyun-cli` binary, not `ctyun`. For compatibility:
+- **Option A (recommended)**: Create symlink: `ln -sf $(which ctyun-cli) ~/.local/bin/ctyun`
+- **Option B**: Update all commands to use `ctyun-cli` explicitly
+- **Option C**: Use `scripts/preflight-check.py --fix` to auto-create symlink
+
+All documentation uses `ctyun` for readability, but agents must resolve to `ctyun-cli`.
 
 ## CLI-First Policy (Repository-Wide)
 

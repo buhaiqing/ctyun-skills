@@ -217,6 +217,7 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+.venv-test/
 .DS_Store
 .omc/
 .omo/
@@ -224,6 +225,7 @@ __marimo__/
 .trae/
 .vscode/
 .github/
+.cli-test-venv/
 
 # Project-specific ignores
 

@@ -41,8 +41,8 @@ printf "%s" "default" > /tmp/ctyun-home/.ctyun/current
 | DescribeAlarmRules | yes | Full support with filters |
 | ModifyAlarmRule | yes | Partial: threshold, evaluation count, actions |
 | DeleteAlarmRule | yes | Full support |
-| EnableAlarmRule | [verify] | May be part of Modify |
-| DisableAlarmRule | [verify] | May be part of Modify |
+| EnableAlarmRule | yes | Via `modify-alarm-rule` with status flag |
+| DisableAlarmRule | yes | Via `modify-alarm-rule` with status flag |
 | QueryMetricData | yes | Full support |
 | ListMetrics | yes | Full support |
 | ListAlarmHistory | yes | Full support |

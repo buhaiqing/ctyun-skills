@@ -43,7 +43,7 @@ ctyun_sdk/
             └── list_alarm_history.py
 ```
 
-## SDK Method: [to be verified]
+## SDK Method Reference
 
 > **Note:** The exact SDK import paths and method names below are placeholders.
 > Verify against the actual `ctyun_sdk.services.cloudmonitor` module.

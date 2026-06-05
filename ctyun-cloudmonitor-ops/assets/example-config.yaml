@@ -1,0 +1,90 @@
+# Example Cloud Monitor Alarm Rule Configuration
+# See references/alarm-rules-examples.md for more examples
+
+---
+# Critical Infrastructure Alarms
+alarms:
+  - name: ecs-high-cpu-critical
+    namespace: ECS
+    metric: CPUUtilization
+    threshold: 90
+    period: 300
+    evaluation_count: 3
+    comparison_operator: GreaterThanThreshold
+    statistic: Average
+    severity: critical
+    actions:
+      alarm:
+        - arn:ctyun:sms:{{region}}:{{account}}:alert
+
+  - name: ecs-high-memory-critical
+    namespace: ECS
+    metric: MemoryUtilization
+    threshold: 90
+    period: 300
+    evaluation_count: 3
+    comparison_operator: GreaterThanThreshold
+    statistic: Average
+    severity: critical
+
+  - name: ecs-disk-space-warning
+    namespace: ECS
+    metric: DiskUsage
+    threshold: 85
+    period: 300
+    evaluation_count: 2
+    comparison_operator: GreaterThanThreshold
+    statistic: Average
+    severity: warning
+
+# Database Alarms
+  - name: rds-connections-warning
+    namespace: RDS
+    metric: ConnectionCount
+    threshold: 80
+    period: 300
+    evaluation_count: 3
+    comparison_operator: GreaterThanThreshold
+    statistic: Average
+    severity: warning
+
+  - name: rds-high-cpu-critical
+    namespace: RDS
+    metric: CPUUtilization
+    threshold: 85
+    period: 300
+    evaluation_count: 3
+    comparison_operator: GreaterThanThreshold
+    statistic: Average
+    severity: critical
+
+  - name: rds-storage-critical
+    namespace: RDS
+    metric: StorageUsage
+    threshold: 90
+    period: 3600
+    evaluation_count: 1
+    comparison_operator: GreaterThanThreshold
+    statistic: Average
+    severity: critical
+
+# Load Balancer Alarms
+  - name: slb-5xx-errors-critical
+    namespace: SLB
+    metric: HTTPCode_5xx
+    threshold: 10
+    period: 60
+    evaluation_count: 5
+    comparison_operator: GreaterThanThreshold
+    statistic: Sum
+    severity: critical
+
+  - name: slb-connections-warning
+    namespace: SLB
+    metric: ActiveConnections
+    threshold: 10000
+    period: 300
+    evaluation_count: 3
+    comparison_operator: GreaterThanThreshold
+    statistic: Average
+    severity: warning

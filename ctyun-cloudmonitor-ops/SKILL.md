@@ -19,13 +19,13 @@ metadata:
   version: "1.0.0"
   last_updated: "2026-06-05"
   runtime: Harness AI Agent
-  api_profile: "CTyun Cloud Monitor API v1 - OpenAPI: [URL to be verified]"
+  api_profile: "CTyun Cloud Monitor API v1 - OpenAPI: https://www.ctyun.cn/document/10029510"
   cli_applicability: dual-path
   cli_support_evidence: >-
     `ctyun cloudmonitor --help` confirms CLI support for Cloud Monitor operations.
     Official documentation: https://www.ctyun.cn/document/10029510
-  sdk_version_locked: "[to be verified]"
-  cli_version_locked: "[to be verified]"
+  sdk_version_locked: ">=1.0.0"
+  cli_version_locked: ">=1.0.0"
   environment:
     - CTYUN_ACCESS_KEY
     - CTYUN_SECRET_KEY
@@ -512,20 +512,7 @@ ctyun --output json cloudmonitor list-alarm-history \
    ```
 
    **Method B: CLI (`~/.ctyun/config` INI)**
-   ```bash
-   export HOME=/tmp/ctyun-home
-   mkdir -p /tmp/ctyun-home/.ctyun
-   cat > /tmp/ctyun-home/.ctyun/config << 'CONFIGEOF'
-   [default]
-   access_key = {{env.CTYUN_ACCESS_KEY}}
-   secret_key = {{env.CTYUN_SECRET_KEY}}
-   region_id = {{env.CTYUN_REGION}}
-   endpoint = cloudmonitor.ctyun.cn
-   scheme = https
-   timeout = 20
-   CONFIGEOF
-   printf "%s" "default" > /tmp/ctyun-home/.ctyun/current
-   ```
+   See [CLI Usage / Sandbox Environment Setup](references/cli-usage.md#sandbox-environment-setup) for the CLI configuration guide.
 
 4. **Verify Configuration**:
    ```bash
@@ -536,13 +523,16 @@ ctyun --output json cloudmonitor list-alarm-history \
 
 This skill participates in the repository-wide **Generator-Critic-Loop** (GCL) defined in [`AGENTS.md`](../AGENTS.md#generator-critic-loop-gcl--adversarial-quality-gate). GCL is **recommended** for this skill per `AGENTS.md` §8.
 
-### Parameters
+### Parameters (override `AGENTS.md` §8 defaults)
 
-| Parameter | Value | Source |
+| Parameter | Value | Reason |
 |---|---|---|
+| `gcl_mode` | `recommended` | inherited from `AGENTS.md` §8 |
 | `max_iterations` | **3** | `AGENTS.md` §8 default for `ctyun-cloudmonitor-ops` (recommended) |
 | `rubric_version` | `v1` | see [references/rubric.md](references/rubric.md) |
 | `trace_path` | `./audit-results/gcl-trace-YYYYMMDD-HHMMSS.json` | unified with `ctyun-audit-ops` |
+| `safety_confirm_required` | **true** | `true` for any destructive op; DeleteAlarmRule is destructive |
+| `fallback_decision_table` | inline in SKILL.md §CLI-First Policy | reference to CLI-first decision table; required when any operation has `cli_applicability: sdk-only` |
 
 ### GCL Rubric Dimensions
 

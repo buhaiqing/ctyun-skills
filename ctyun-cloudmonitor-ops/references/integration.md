@@ -109,22 +109,7 @@ ctyun config init
 
 ### Manual Configuration
 
-```bash
-export HOME=/tmp/ctyun-home  # For sandbox environments
-mkdir -p /tmp/ctyun-home/.ctyun
-
-cat > /tmp/ctyun-home/.ctyun/config << 'EOF'
-[default]
-access_key = your_access_key
-secret_key = your_secret_key
-region_id = cn-gz
-endpoint = cloudmonitor.ctyun.cn
-scheme = https
-timeout = 20
-EOF
-
-printf "%s" "default" > /tmp/ctyun-home/.ctyun/current
-```
+For manual CLI configuration, see [CLI Usage / Sandbox Environment Setup](cli-usage.md#sandbox-environment-setup).
 
 ## CI/CD Integration
 

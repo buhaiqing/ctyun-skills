@@ -6,8 +6,10 @@
 
 ## Repo Layout
 
-> **Status:** The **meta-skill** and **`ctyun-cloudmonitor-ops`** are shipped.
-> Other `ctyun-*-ops` product skills below are **planned** and will be produced
+> **Status:** The **meta-skill**, **`ctyun-cloudmonitor-ops`**, **`ctyun-ecs-ops`**,
+> **`ctyun-iam-ops`**, **`ctyun-redis-ops`**, **`ctyun-elb-ops`**, **`ctyun-eip-ops`**,
+> **`ctyun-cce-ops`**, and **`ctyun-kms-ops`** are shipped.
+> Other product skills are **planned** and will be produced
 > by `ctyun-skill-generator`. The layout here reflects what is **currently on disk**.
 
 ```
@@ -40,7 +42,79 @@ ctyun-skills/
 │       ├── prompt-templates.md
 │       ├── rubric.md
 │       └── troubleshooting.md
-└── ctyun-ecs-ops/                                  # Shipped: ECS operations
+├── ctyun-ecs-ops/                                  # Shipped: ECS operations
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-iam-ops/                                  # Shipped: IAM operations
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-redis-ops/                                # Shipped: Redis operations
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-elb-ops/                                  # Shipped: ELB operations
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-eip-ops/                                  # Shipped: EIP operations
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-cce-ops/                                  # Shipped: CCE operations
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+└── ctyun-kms-ops/                                  # Shipped: KMS operations
     ├── SKILL.md
     ├── assets/
     └── references/
@@ -319,21 +393,24 @@ Common content that appears in more than one skill MUST be factored:
 
 ## Cross-Skill Delegation
 
-> **Status:** **Planned.** `ctyun-skill-generator`, `ctyun-cloudmonitor-ops`,
-> and `ctyun-ecs-ops` are **Shipped**. The delegation table below is a **contract**
-> that the meta-skill will materialize as it produces the corresponding
-> `ctyun-*-ops` skills — not a current inventory.
+> **Status:** `ctyun-skill-generator`, `ctyun-cloudmonitor-ops`,
+> `ctyun-ecs-ops`, `ctyun-iam-ops`, `ctyun-redis-ops`, `ctyun-elb-ops`,
+> `ctyun-eip-ops`, `ctyun-cce-ops`, and `ctyun-kms-ops` are **Shipped**.
+> The delegation table below reflects the current inventory.
 
 | If they ask about | Delegate to | Status |
 |---|---|---|
 | Generate a new product skill | `ctyun-skill-generator` | **Shipped** |
 | Monitoring metrics, alarm rules | `ctyun-cloudmonitor-ops` | **Shipped** |
 | ECS create/stop/delete | `ctyun-ecs-ops` | **Shipped** |
+| IAM users, policies, keys | `ctyun-iam-ops` | **Shipped** |
+| Redis instance CRUD | `ctyun-redis-ops` | **Shipped** |
+| Load balancer config | `ctyun-elb-ops` | **Shipped** |
+| Elastic IP lifecycle (allocate/associate/disassociate/release) | `ctyun-eip-ops` | **Shipped** |
+| CCE cluster/node/task management | `ctyun-cce-ops` | **Shipped** |
+| Key management, encryption | `ctyun-kms-ops` | **Shipped** |
 | RDS instance CRUD | `ctyun-rds-ops` | Planned |
 | Alert analysis, suppression, reporting | `ctyun-alert-intelligence` | Planned (read-only) |
-| IAM users, policies, keys | `ctyun-iam-ops` | Planned |
-| Key management, encryption | `ctyun-kms-ops` | Planned |
-| Load balancer config | `ctyun-elb-ops` | Planned |
 
 - `ctyun-alert-intelligence` (planned) is **read-only** — it analyzes alerts but delegates alarm rule changes back to `ctyun-cloudmonitor-ops`.
 - Each generated skill's `SHOULD NOT Use` section lists exactly where to route.
@@ -653,7 +730,9 @@ Return strict JSON:
 
 ### 8. Per-Skill Defaults
 
-> **Status:** `ctyun-skill-generator` and `ctyun-cloudmonitor-ops` are **Shipped**.
+> **Status:** `ctyun-skill-generator`, `ctyun-cloudmonitor-ops`, `ctyun-ecs-ops`,
+> `ctyun-iam-ops`, `ctyun-redis-ops`, `ctyun-elb-ops`, `ctyun-eip-ops`,
+> `ctyun-cce-ops`, and `ctyun-kms-ops` are **Shipped**.
 > All other rows are **Planned** defaults the meta-skill will apply when it
 > produces the corresponding `ctyun-*-ops` skill. They are documented here so
 > the generator has a single source of truth — **not** as a current inventory.
@@ -665,6 +744,12 @@ Return strict JSON:
 | `ctyun-skill-generator` | optional | 3 | meta operation; see [`ctyun-skill-generator/SKILL.md` §Quality Gate](ctyun-skill-generator/SKILL.md#quality-gate-gcl) for the live parameters |
 | `ctyun-cloudmonitor-ops` | recommended | 3 | alarm rule delete; see [`ctyun-cloudmonitor-ops/SKILL.md` §Quality Gate](ctyun-cloudmonitor-ops/SKILL.md#quality-gate-gcl) for the live parameters |
 | `ctyun-ecs-ops` | **required** | 2 | delete/stop are destructive; see [`ctyun-ecs-ops/SKILL.md` §Quality Gate](ctyun-ecs-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-iam-ops` | **required** | 2 | delete user/group/policy/role/AK are destructive; see [`ctyun-iam-ops/SKILL.md` §Quality Gate](ctyun-iam-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-redis-ops` | **required** | 2 | delete/flush are destructive; see [`ctyun-redis-ops/SKILL.md` §Quality Gate](ctyun-redis-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-elb-ops` | recommended | 3 | listener / backend delete; see [`ctyun-elb-ops/SKILL.md` §Quality Gate](ctyun-elb-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-eip-ops` | **required** | 2 | release EIP can break production; see [`ctyun-eip-ops/SKILL.md` §Quality Gate](ctyun-eip-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-cce-ops` | **required** | 2 | cluster delete / node drain are destructive; see [`ctyun-cce-ops/SKILL.md` §Quality Gate](ctyun-cce-ops/SKILL.md#quality-gate-gcl) for the live parameters |
+| `ctyun-kms-ops` | **required** | 2 | schedule key deletion is irreversible; see [`ctyun-kms-ops/SKILL.md` §Quality Gate](ctyun-kms-ops/SKILL.md#quality-gate-gcl) for the live parameters |
 
 #### Planned (generator will apply on first creation)
 
@@ -674,10 +759,6 @@ Return strict JSON:
 | `ctyun-mysql-ops` | **required** | 2 | DROP / DELETE / TRUNCATE |
 | `ctyun-postgresql-ops` | **required** | 2 | DROP / DELETE / TRUNCATE |
 | `ctyun-mongodb-ops` | **required** | 2 | dropDatabase / delete |
-| `ctyun-iam-ops` | **required** | 2 | detach policy / delete role / rotate keys |
-| `ctyun-kms-ops` | **required** | 2 | schedule key deletion is irreversible |
-| `ctyun-eip-ops` | **required** | 2 | release EIP can break production |
-| `ctyun-elb-ops` | recommended | 3 | listener / backend delete |
 | `ctyun-alert-intelligence` | optional | 5 | read-only |
 | `ctyun-audit-ops` | optional | 5 | read-only |
 | `ctyun-tag-audit-ops` | optional | 5 | read-only |
@@ -764,6 +845,12 @@ on a non-`sdk-only` skill is a **blocker** for merge.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.8.0 | 2026-06-05 | Ship `ctyun-kms-ops`: KMS key lifecycle operations (create/encrypt/decrypt/schedule-delete) with dual-path and GCL quality gate |
+| 1.7.0 | 2026-06-05 | Ship `ctyun-cce-ops`: CCE cluster node/task operations (create/delete/resize/list) with dual-path and GCL quality gate |
+| 1.6.0 | 2026-06-05 | Ship `ctyun-eip-ops`: Elastic IP lifecycle operations (allocate/associate/disassociate/release) with dual-path and GCL quality gate |
+| 1.5.0 | 2026-06-05 | Ship `ctyun-elb-ops`: ELB lifecycle operations (listeners, backends, certificates) with dual-path and GCL quality gate |
+| 1.4.0 | 2026-06-05 | Ship `ctyun-redis-ops`: Redis instance lifecycle (create/describe/delete/flush/config) with dual-path and GCL quality gate |
+| 1.3.0 | 2026-06-05 | Ship `ctyun-iam-ops`: IAM identity/access management (user/group/policy/role/AK/enterprise-project/MFA) with dual-path and GCL quality gate |
 | 1.2.0 | 2026-06-05 | Ship `ctyun-ecs-ops`: ECS lifecycle operations (create/start/stop/delete) with CLI-first policy and GCL quality gate |
 | 1.1.0 | 2026-06-05 | Ship `ctyun-cloudmonitor-ops`: Cloud Monitor alarm rule operations with dual-path (SDK + CLI) and GCL quality gate |
 | 1.0.0 | 2026-06-05 | Initial AGENTS.md for CTyun Skills Farm — adapted from JD Cloud Skills pattern with CTyun-specific naming and conventions |

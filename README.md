@@ -19,7 +19,13 @@ A collection of **AI Agent Skill definitions** (structured Markdown documents fo
 | [`ctyun-skill-generator`](ctyun-skill-generator/) — Meta Skill | **Shipped** (v1.0.0) |
 | [`ctyun-cloudmonitor-ops`](ctyun-cloudmonitor-ops/) — Cloud Monitor | **Shipped** (v1.0.0) |
 | [`ctyun-ecs-ops`](ctyun-ecs-ops/) — ECS | **Shipped** (v1.0.0) |
-| Other `ctyun-*-ops` product skills | **Planned** (11 skills) |
+| [`ctyun-iam-ops`](ctyun-iam-ops/) — IAM | **Shipped** (v1.0.0) |
+| [`ctyun-redis-ops`](ctyun-redis-ops/) — Redis | **Shipped** (v1.0.0) |
+| [`ctyun-elb-ops`](ctyun-elb-ops/) — ELB | **Shipped** (v1.0.0) |
+| [`ctyun-eip-ops`](ctyun-eip-ops/) — EIP | **Shipped** (v1.0.0) |
+| [`ctyun-cce-ops`](ctyun-cce-ops/) — CCE | **Shipped** (v1.0.0) |
+| [`ctyun-kms-ops`](ctyun-kms-ops/) — KMS | **Shipped** (v1.0.0) |
+| Other `ctyun-*-ops` product skills | **Planned** (4 skills) |
 | GCL Phase 1 (validate on shipped skills) | **In Progress** |
 | GCL Phase 2 (Orchestrator: `scripts/gcl_runner.py`) | Planned |
 | GCL Phase 3 (Quality dashboard) | Planned |
@@ -34,6 +40,12 @@ A collection of **AI Agent Skill definitions** (structured Markdown documents fo
 | [ctyun-skill-generator](ctyun-skill-generator/) | Meta Skill | Generate new `ctyun-*-ops` skills from OpenAPI docs | optional | `ctyun-skill-generator/` |
 | [ctyun-cloudmonitor-ops](ctyun-cloudmonitor-ops/) | Cloud Monitor | Alarm rule CRUD, metric query, alarm history analysis | recommended | `ctyun-cloudmonitor-ops/` |
 | [ctyun-ecs-ops](ctyun-ecs-ops/) | Elastic Cloud Server | Instance lifecycle (create/start/stop/reboot/delete), snapshots, key pairs, images | **required** | `ctyun-ecs-ops/` |
+| [ctyun-iam-ops](ctyun-iam-ops/) | IAM | User/group/policy/role/AK/enterprise-project/MFA management | **required** | `ctyun-iam-ops/` |
+| [ctyun-redis-ops](ctyun-redis-ops/) | Redis | Instance lifecycle (create/describe/delete/flush/config) | **required** | `ctyun-redis-ops/` |
+| [ctyun-elb-ops](ctyun-elb-ops/) | ELB | Listener/backend/certificate lifecycle management | recommended | `ctyun-elb-ops/` |
+| [ctyun-eip-ops](ctyun-eip-ops/) | Elastic IP | IP lifecycle (allocate/associate/disassociate/release) | **required** | `ctyun-eip-ops/` |
+| [ctyun-cce-ops](ctyun-cce-ops/) | CCE | Cluster/node/task lifecycle management | **required** | `ctyun-cce-ops/` |
+| [ctyun-kms-ops](ctyun-kms-ops/) | KMS | Key lifecycle (create/encrypt/decrypt/schedule-delete) | **required** | `ctyun-kms-ops/` |
 
 ---
 
@@ -44,10 +56,6 @@ Skills that `ctyun-skill-generator` will produce, ordered by priority:
 | Skill | Product | GCL | max_iter |
 |---|---|---|---|
 | `ctyun-rds-ops` | RDS | required | 2 |
-| `ctyun-iam-ops` | IAM | required | 2 |
-| `ctyun-kms-ops` | KMS | required | 2 |
-| `ctyun-eip-ops` | Elastic IP | required | 2 |
-| `ctyun-elb-ops` | ELB | recommended | 3 |
 | `ctyun-alert-intelligence` | Alert Analysis (read-only) | optional | 5 |
 | `ctyun-mysql-ops` / `ctyun-postgresql-ops` / `ctyun-mongodb-ops` | Database series | required | 2 |
 
@@ -93,7 +101,79 @@ ctyun-skills/
 │       ├── prompt-templates.md
 │       ├── rubric.md
 │       └── troubleshooting.md
-└── ctyun-ecs-ops/                          # Shipped: ECS
+├── ctyun-ecs-ops/                          # Shipped: ECS
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-iam-ops/                          # Shipped: IAM
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-redis-ops/                        # Shipped: Redis
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-elb-ops/                          # Shipped: ELB
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-eip-ops/                          # Shipped: EIP
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+├── ctyun-cce-ops/                          # Shipped: CCE
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+│       ├── api-sdk-usage.md
+│       ├── cli-usage.md
+│       ├── core-concepts.md
+│       ├── integration.md
+│       ├── monitoring.md
+│       ├── prompt-templates.md
+│       ├── rubric.md
+│       └── troubleshooting.md
+└── ctyun-kms-ops/                          # Shipped: KMS
     ├── SKILL.md
     ├── assets/
     └── references/
@@ -255,6 +335,12 @@ python3 scripts/preflight-check.py --verbose --fix
 - [Skill Generator](ctyun-skill-generator/SKILL.md)
 - [Cloud Monitor Skill](ctyun-cloudmonitor-ops/SKILL.md)
 - [ECS Skill](ctyun-ecs-ops/SKILL.md)
+- [IAM Skill](ctyun-iam-ops/SKILL.md)
+- [Redis Skill](ctyun-redis-ops/SKILL.md)
+- [ELB Skill](ctyun-elb-ops/SKILL.md)
+- [EIP Skill](ctyun-eip-ops/SKILL.md)
+- [CCE Skill](ctyun-cce-ops/SKILL.md)
+- [KMS Skill](ctyun-kms-ops/SKILL.md)
 - [CLI-First Decision Matrix](ctyun-skill-generator/references/cli-decision-matrix.md)
 - [GCL Rubric](ctyun-skill-generator/references/rubric.md)
 - [GCL Prompt Templates](ctyun-skill-generator/references/prompt-templates.md)

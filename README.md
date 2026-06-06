@@ -42,7 +42,7 @@ A collection of **AI Agent Skill definitions** (structured Markdown documents fo
 | [`ctyun-alert-intelligence`](ctyun-alert-intelligence/) — Alert Intelligence | **Shipped** (v1.0.0) |
 | [`ctyun-audit-ops`](ctyun-audit-ops/) — Audit Ops | **Shipped** (v1.0.0) |
 | [`ctyun-tag-audit-ops`](ctyun-tag-audit-ops/) — Tag Audit | **Shipped** (v1.0.0) |
-| Other `ctyun-*-ops` product skills | **Planned** |
+<!-- All 24 product skills shipped; no planned items remain -->
 | GCL Phase 1 (validate on shipped skills) | **Complete** |
 | GCL Phase 2 (Orchestrator: `scripts/gcl_runner.py`) | **Shipped** |
 | GCL Phase 3 (Quality dashboard) | **Shipped** |
@@ -101,10 +101,15 @@ ctyun-skills/
 ├── .env.example                            # Credential template (.env is gitignored)
 ├── docs/
 │   └── GCL_RETROSPECTIVE.md               # GCL rollout retrospective & Phase 3 dashboard design
-├── audit-results/                          # GCL trace persistence (planned)
+├── audit-results/                          # GCL trace persistence
 ├── scripts/
 │   ├── preflight-check.py                  # Environment verification
-│   └── check_*.py                          # Validation stubs (planned)
+│   ├── gcl_runner.py                       # GCL orchestrator (985 lines)
+│   ├── gcl_dashboard.py                    # Quality dashboard (389 lines)
+│   ├── gcl_monitor_alarms.py               # Alarm wiring (327 lines)
+│   ├── check_doc_integrity.py              # Doc link integrity checker
+│   ├── check_gcl_artifacts.py              # GCL artifact inspector
+│   └── check_skill_size.py                 # Token-efficiency budget checker
 ├── ctyun-skill-generator/                  # Shipped: Meta Skill
 │   ├── SKILL.md
 │   └── references/
@@ -462,12 +467,14 @@ python3 scripts/preflight-check.py --verbose --fix
 
 ## Roadmap
 
+All four GCL phases have been delivered. See [GCL Retrospective](docs/GCL_RETROSPECTIVE.md) for the design contract and dashboard details.
+
 | Phase | Goal | Status |
 |---|---|---|
-| **Phase 1** | End-to-end GCL on shipped skills (trace + Critic isolation) | In Progress |
-| **Phase 2** | `scripts/gcl_runner.py` — reusable Orchestrator | Planned |
-| **Phase 3** | Quality dashboard from `gcl-trace-*.json` | Planned |
-| **Phase 4** | Rubric pass-rate → Cloud Monitor alarms | Planned |
+| **Phase 1** | End-to-end GCL on shipped skills (trace + Critic isolation) | **Complete** |
+| **Phase 2** | `scripts/gcl_runner.py` — reusable Orchestrator | **Complete** |
+| **Phase 3** | Quality dashboard from `gcl-trace-*.json` | **Complete** |
+| **Phase 4** | Rubric pass-rate → Cloud Monitor alarms | **Complete** |
 
 ---
 

@@ -18,7 +18,7 @@
 
 ```
 ctyun-skills/
-├── README.md                                       # Project readme (currently a stub)
+├── README.md                                       # Project readme (full documentation)
 ├── AGENTS.md                                       # ← this file (repo constitution)
 ├── LICENSE                                         # MIT
 ├── pyproject.toml                                  # Project metadata (uv-managed)

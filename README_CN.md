@@ -36,7 +36,7 @@
 | [`ctyun-alert-intelligence`](ctyun-alert-intelligence/) — 告警智能分析 | **已发布**（v1.0.0） |
 | [`ctyun-audit-ops`](ctyun-audit-ops/) — 审计运维 | **已发布**（v1.0.0） |
 | [`ctyun-tag-audit-ops`](ctyun-tag-audit-ops/) — 标签审计 | **已发布**（v1.0.0） |
-| 其他 `ctyun-*-ops` 产品技能 | **计划中** |
+<!-- 全部 24 个产品技能已发布，无计划中项 -->
 | GCL 第一阶段（对已发布技能进行验证） | **已完成** |
 | GCL 第二阶段（编排器：`scripts/gcl_runner.py`） | **已发布** |
 | GCL 第三阶段（质量看板） | **已发布** |
@@ -95,10 +95,15 @@ ctyun-skills/
 ├── .env.example                            # 凭证模板（.env 已 gitignore）
 ├── docs/
 │   └── GCL_RETROSPECTIVE.md               # GCL 上线回顾与第三阶段看板设计
-├── audit-results/                          # GCL 追踪持久化存储（规划中）
+├── audit-results/                          # GCL 追踪持久化存储
 ├── scripts/
 │   ├── preflight-check.py                  # 环境验证
-│   └── check_*.py                          # 验证存根（规划中）
+│   ├── gcl_runner.py                       # GCL 编排器（985 行）
+│   ├── gcl_dashboard.py                    # 质量看板（389 行）
+│   ├── gcl_monitor_alarms.py               # 告警接入（327 行）
+│   ├── check_doc_integrity.py              # 文档链接完整性检查
+│   ├── check_gcl_artifacts.py              # GCL 产物检查
+│   └── check_skill_size.py                 # Token 效率预算检查
 ├── ctyun-skill-generator/                  # 已发布：元技能
 │   ├── SKILL.md
 │   └── references/
@@ -444,12 +449,14 @@ python3 scripts/preflight-check.py --verbose --fix
 
 ## 路线图
 
+四个 GCL 阶段已全部交付。详情见 [GCL 上线回顾](docs/GCL_RETROSPECTIVE.md)。
+
 | 阶段 | 目标 | 状态 |
 |---|---|---|
-| **第一阶段** | 在已发布技能上实现端到端 GCL（追踪 + 评审器隔离） | 进行中 |
-| **第二阶段** | `scripts/gcl_runner.py` — 可复用编排器 | 计划中 |
-| **第三阶段** | 基于 `gcl-trace-*.json` 的质量看板 | 计划中 |
-| **第四阶段** | 评审规则通过率 → 云监控告警 | 计划中 |
+| **第一阶段** | 在已发布技能上实现端到端 GCL（追踪 + 评审器隔离） | **已完成** |
+| **第二阶段** | `scripts/gcl_runner.py` — 可复用编排器 | **已完成** |
+| **第三阶段** | 基于 `gcl-trace-*.json` 的质量看板 | **已完成** |
+| **第四阶段** | 评审规则通过率 → 云监控告警 | **已完成** |
 
 ---
 
